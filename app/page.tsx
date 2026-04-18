@@ -51,9 +51,6 @@ const saveRecords = (newRecords: RecordItem[]) => {
   setRecords(newRecords);
   localStorage.setItem("delegateRecords", JSON.stringify(newRecords));
 };
-    setRecords(newRecords);
-    localStorage.setItem("delegateRecords", JSON.stringify(newRecords));
-  };
 
   const handleLogin = () => {
     if (loginForm.username === "admin" && loginForm.password === "delegate123") {
