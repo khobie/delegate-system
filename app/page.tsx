@@ -42,7 +42,7 @@ export default function Home() {
     }
   }, []);
 
-  const saveRecords = (newRecords) => {
+  const saveRecords = (newRecords: any) => {
     setRecords(newRecords);
     localStorage.setItem("delegateRecords", JSON.stringify(newRecords));
   };
@@ -65,13 +65,13 @@ export default function Home() {
     setCurrentPage(1);
   };
 
-  const handleAreaChange = (e) => {
+  const handleAreaChange = (e: any) => {
     const selected = electoralAreas.find((a) => a.name === e.target.value);
     setStations(selected ? selected.pollingStations : []);
     setForm({ ...form, electoralArea: e.target.value, station: "", stationCode: "" });
   };
 
-  const handleStationChange = (e) => {
+  const handleStationChange = (e: any) => {
     const selectedStation = stations.find(s => s.name === e.target.value);
     setForm({ ...form, station: e.target.value, stationCode: selectedStation?.code || "" });
   };
@@ -117,7 +117,7 @@ export default function Home() {
     alert("Form issued successfully!");
   };
 
-  const handleReturn = async (id) => {
+  const handleReturn = async (id: any) => {
     const record = records.find(r => r.id === id);
     try {
       await fetch(SCRIPT_URL, {
