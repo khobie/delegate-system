@@ -1,65 +1,375 @@
-import Image from "next/image";
+"use client";
+import { useState, useEffect } from "react";
+import { electoralAreas } from "../data/electoralData";
+
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbweATVBSJKIP5GuyJ6r_5QrDGMavi_cl_el2YFvtDlE-PS9vj9wkYidxDjBd7nhOlJZ/exec";
 
 export default function Home() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const [loginError, setLoginError] = useState("");
+  
+  const [form, setForm] = useState({});
+  const [stations, setStations] = useState([]);
+  const [records, setRecords] = useState([]);
+  const [activeTab, setActiveTab] = useState("issue");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 20;
+
+  useEffect(() => {
+    const fetchRecords = async () => {
+      try {
+        const response = await fetch(SCRIPT_URL + "?action=GET_ALL");
+        const data = await response.json();
+        if (data && Array.isArray(data)) {
+          setRecords(data.map((r, i) => ({ ...r, id: i + 1 })));
+        }
+      } catch (e) {
+        const saved = localStorage.getItem("delegateRecords");
+        if (saved) {
+          setRecords(JSON.parse(saved));
+        }
+      }
+    };
+    
+    fetchRecords();
+    
+    const loggedIn = localStorage.getItem("isLoggedIn");
+    if (loggedIn === "true") {
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  const saveRecords = (newRecords) => {
+    setRecords(newRecords);
+    localStorage.setItem("delegateRecords", JSON.stringify(newRecords));
+  };
+
+  const handleLogin = () => {
+    if (loginForm.username === "admin" && loginForm.password === "delegate123") {
+      setIsLoggedIn(true);
+      localStorage.setItem("isLoggedIn", "true");
+      setLoginError("");
+    } else {
+      setLoginError("Invalid username or password");
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    localStorage.removeItem("isLoggedIn");
+    setActiveTab("issue");
+    setSearchTerm("");
+    setCurrentPage(1);
+  };
+
+  const handleAreaChange = (e) => {
+    const selected = electoralAreas.find((a) => a.name === e.target.value);
+    setStations(selected ? selected.pollingStations : []);
+    setForm({ ...form, electoralArea: e.target.value, station: "", stationCode: "" });
+  };
+
+  const handleStationChange = (e) => {
+    const selectedStation = stations.find(s => s.name === e.target.value);
+    setForm({ ...form, station: e.target.value, stationCode: selectedStation?.code || "" });
+  };
+
+  const handleSubmit = async () => {
+    if (!form.surname || !form.firstname || !form.electoralArea || !form.station || !form.position) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    const newRecord = {
+      id: Date.now(),
+      ...form,
+      status: "ISSUED",
+      issuedDate: new Date().toISOString(),
+      returnedDate: null,
+    };
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          surname: form.surname,
+          firstname: form.firstname,
+          middlename: form.middlename || "",
+          phone: form.phone || "",
+          age: form.age || "",
+          electoralArea: form.electoralArea,
+          station: form.station,
+          stationCode: form.stationCode || "",
+          position: form.position,
+          status: "ISSUED",
+          action: "ISSUE"
+        }),
+      });
+    } catch (e) {
+      console.log("Offline mode");
+    }
+
+    saveRecords([newRecord, ...records]);
+    setForm({});
+    setStations([]);
+    alert("Form issued successfully!");
+  };
+
+  const handleReturn = async (id) => {
+    const record = records.find(r => r.id === id);
+    try {
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ phone: record.phone, action: "RETURN" }),
+      });
+    } catch (e) {
+      console.log("Offline mode");
+    }
+
+    const updated = records.map(r => 
+      r.id === id ? { ...r, status: "RETURNED", returnedDate: new Date().toISOString() } : r
+    );
+    saveRecords(updated);
+  };
+
+  const filteredRecords = records.filter(r => 
+    r.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.firstname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.electoralArea?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.station?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.position?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const stats = {
+    issued: records.filter(r => r.status === "ISSUED").length,
+    returned: records.filter(r => r.status === "RETURNED").length,
+    total: records.length
+  };
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-red-800 py-8 px-4 flex items-center justify-center">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8 w-full max-w-md">
+          <div className="bg-gradient-to-r from-red-800 via-red-700 to-blue-900 px-6 py-5 rounded-t-xl -mx-8 -mt-8 mb-6">
+            <h1 className="text-xl font-bold text-white text-center">NEW JUABEN SOUTH</h1>
+            <p className="text-red-100 text-sm text-center">Constituency Form Issuance</p>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Username</label>
+              <input type="text" value={loginForm.username} placeholder="Enter username"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none"
+                onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+              <input type="password" value={loginForm.password} placeholder="Enter password"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none"
+                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} />
+            </div>
+            {loginError && <p className="text-red-600 text-sm">{loginError}</p>}
+            <button className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg"
+              onClick={handleLogin}>Login</button>
+          </div>
+          
+          <p className="text-xs text-slate-500 text-center mt-4">Default: admin / delegate123</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-red-800 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden mb-6">
+          <div className="bg-gradient-to-r from-red-800 via-red-700 to-blue-900 px-6 py-5 flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-white">NEW JUABEN SOUTH</h1>
+              <p className="text-red-100 text-sm">Constituency Form Issuance System</p>
+            </div>
+            <button onClick={handleLogout} className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm">Logout</button>
+          </div>
+          
+          <div className="flex border-b border-slate-200">
+            <button onClick={() => setActiveTab("issue")} className={`px-6 py-3 font-medium ${activeTab === "issue" ? "border-b-2 border-red-800 text-red-800" : "text-slate-500"}`}>Issue Form</button>
+            <button onClick={() => setActiveTab("return")} className={`px-6 py-3 font-medium ${activeTab === "return" ? "border-b-2 border-red-800 text-red-800" : "text-slate-500"}`}>Return Form</button>
+            <button onClick={() => setActiveTab("records")} className={`px-6 py-3 font-medium ${activeTab === "records" ? "border-b-2 border-red-800 text-red-800" : "text-slate-500"}`}>Records</button>
+          </div>
+
+          {activeTab === "issue" && (
+            <div className="p-6">
+              <div className="grid grid-cols-3 gap-4 mb-5">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Surname *</label>
+                  <input value={form.surname || ""} placeholder="Enter surname"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none"
+                    onChange={(e) => setForm({ ...form, surname: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">First Name *</label>
+                  <input value={form.firstname || ""} placeholder="Enter first name"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none"
+                    onChange={(e) => setForm({ ...form, firstname: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Middle Name</label>
+                  <input value={form.middlename || ""} placeholder="Optional"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none"
+                    onChange={(e) => setForm({ ...form, middlename: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-5">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone Number</label>
+                  <input value={form.phone || ""} placeholder="Mobile number"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none"
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Age</label>
+                  <input value={form.age || ""} placeholder="Your age" type="number"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none"
+                    onChange={(e) => setForm({ ...form, age: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-5">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Electoral Area *</label>
+                  <select value={form.electoralArea || ""}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none bg-white"
+                    onChange={handleAreaChange}>
+                    <option value="">Select Electoral Area</option>
+                    {electoralAreas.map((area, index) => (
+                      <option key={index} value={area.name}>{area.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Polling Station *</label>
+                  <select value={form.station || ""}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none bg-white"
+                    onChange={handleStationChange} disabled={stations.length === 0}>
+                    <option value="">Select Polling Station</option>
+                    {stations.map((s, i) => (
+                      <option key={i} value={s.name}>{s.name} ({s.code})</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Position *</label>
+                <select value={form.position || ""}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none bg-white"
+                  onChange={(e) => setForm({ ...form, position: e.target.value })}>
+                  <option value="">Select Position</option>
+                  <option>CHAIRMAN</option><option>SECRETARY</option><option>ORGANIZER</option>
+                  <option>WOMEN ORGANIZER</option><option>YOUTH ORGANIZER</option>
+                  <option>COMMUNICATION OFFICER</option><option>ELECTORAL AFFAIRS OFFICER</option>
+                </select>
+              </div>
+
+              <button className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg"
+                onClick={handleSubmit}>Issue Form</button>
+            </div>
+          )}
+
+          {activeTab === "return" && (
+            <div className="p-6">
+              <input placeholder="Search..." value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg mb-4" />
+
+              <div className="space-y-3">
+                {filteredRecords.filter(r => r.status === "ISSUED").length === 0 ? (
+                  <p className="text-center text-slate-500 py-8">No issued forms to return</p>
+                ) : (
+                  <>
+                    {filteredRecords.filter(r => r.status === "ISSUED").slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage).map((record) => (
+                      <div key={record.id} className="border border-slate-200 rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className="font-semibold">{record.surname} {record.firstname}</h3>
+                            <p className="text-sm text-slate-500">{record.position}</p>
+                          </div>
+                          <span className="px-3 py-1 rounded-full text-xs bg-slate-200">ISSUED</span>
+                        </div>
+                        <p className="text-sm text-slate-600 mb-2">{record.electoralArea} - {record.station} ({record.stationCode})</p>
+                        <button onClick={() => handleReturn(record.id)} className="w-full bg-red-700 text-white py-2 rounded-lg">Mark as Returned</button>
+                      </div>
+                    ))}
+                    {filteredRecords.filter(r => r.status === "ISSUED").length > recordsPerPage && (
+                      <div className="flex justify-between pt-4">
+                        <button disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)} className="px-4 py-2 bg-slate-200 rounded-lg">Previous</button>
+                        <span className="text-sm py-2">Page {currentPage}</span>
+                        <button disabled={currentPage >= Math.ceil(filteredRecords.filter(r => r.status === "ISSUED").length / recordsPerPage)} onClick={() => setCurrentPage(currentPage + 1)} className="px-4 py-2 bg-slate-200 rounded-lg">Next</button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "records" && (
+            <div className="p-6">
+              <div className="flex gap-4 mb-6">
+                <div className="flex-1 bg-slate-100 p-4 text-center rounded-lg">
+                  <div className="text-2xl font-bold text-blue-900">{stats.issued}</div>
+                  <div className="text-sm">Issued</div>
+                </div>
+                <div className="flex-1 bg-slate-100 p-4 text-center rounded-lg">
+                  <div className="text-2xl font-bold text-red-700">{stats.returned}</div>
+                  <div className="text-sm">Returned</div>
+                </div>
+                <div className="flex-1 bg-slate-100 p-4 text-center rounded-lg">
+                  <div className="text-2xl font-bold">{stats.total}</div>
+                  <div className="text-sm">Total</div>
+                </div>
+              </div>
+
+              <input placeholder="Search..." value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg mb-4" />
+
+              <div className="space-y-3">
+                {filteredRecords.length === 0 ? (
+                  <p className="text-center text-slate-500 py-8">No records found</p>
+                ) : (
+                  <>
+                    {filteredRecords.slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage).map((record) => (
+                      <div key={record.id} className="border border-slate-200 rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className="font-semibold">{record.surname} {record.firstname}</h3>
+                            <p className="text-sm text-slate-500">{record.position}</p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs ${record.status === "ISSUED" ? "bg-slate-200" : "bg-red-100"}`}>{record.status}</span>
+                        </div>
+                        <p className="text-sm text-slate-600">{record.electoralArea} - {record.station} ({record.stationCode})</p>
+                        {record.status === "ISSUED" && (
+                          <button onClick={() => handleReturn(record.id)} className="mt-3 w-full bg-red-700 text-white py-2 rounded-lg">Mark as Returned</button>
+                        )}
+                      </div>
+                    ))}
+                    {filteredRecords.length > recordsPerPage && (
+                      <div className="flex justify-between pt-4">
+                        <button disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)} className="px-4 py-2 bg-slate-200 rounded-lg">Previous</button>
+                        <span className="text-sm py-2">Page {currentPage}</span>
+                        <button disabled={currentPage >= Math.ceil(filteredRecords.length / recordsPerPage)} onClick={() => setCurrentPage(currentPage + 1)} className="px-4 py-2 bg-slate-200 rounded-lg">Next</button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
