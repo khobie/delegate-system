@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { electoralAreas } from "../data/electoralData";
 
@@ -19,17 +20,28 @@ export default function Home() {
 
   useEffect(() => {
     const fetchRecords = async () => {
+      const saved = localStorage.getItem("delegateRecords");
+      if (saved !== null) {
+        try {
+          setRecords(JSON.parse(saved) as any);
+          return;
+        } catch {
+          // ignore invalid local storage and continue to fetch remote records
+        }
+      }
+
       try {
         const response = await fetch(SCRIPT_URL + "?action=GET_ALL");
         const data = await response.json();
         if (data && Array.isArray(data)) {
           const mapped = data.map((r: any, i: number) => ({ ...r, id: i + 1 }));
           setRecords(mapped as any);
+          localStorage.setItem("delegateRecords", JSON.stringify(mapped));
         }
       } catch (e) {
-        const saved = localStorage.getItem("delegateRecords");
-        if (saved) {
-          setRecords(JSON.parse(saved) as any);
+        const fallback = localStorage.getItem("delegateRecords");
+        if (fallback) {
+          setRecords(JSON.parse(fallback) as any);
         }
       }
     };
@@ -190,12 +202,17 @@ const saveRecords = (newRecords: RecordItem[]) => {
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-red-800 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden mb-6">
-          <div className="bg-gradient-to-r from-red-800 via-red-700 to-blue-900 px-6 py-5 flex justify-between items-center">
+          <div className="bg-gradient-to-r from-red-800 via-red-700 to-blue-900 px-6 py-5 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h1 className="text-2xl font-bold text-white">NEW JUABEN SOUTH</h1>
               <p className="text-red-100 text-sm">Constituency Form Issuance System</p>
             </div>
-            <button onClick={handleLogout} className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm">Logout</button>
+            <div className="flex gap-3">
+              <Link href="/admin" className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm">
+                Admin Dashboard
+              </Link>
+              <button onClick={handleLogout} className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm">Logout</button>
+            </div>
           </div>
           
           <div className="flex border-b border-slate-200">
