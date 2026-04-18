@@ -42,7 +42,15 @@ export default function Home() {
     }
   }, []);
 
-  const saveRecords = (newRecords: any) => {
+  type RecordItem = {
+  id?: number;
+  [key: string]: any;
+};
+
+const saveRecords = (newRecords: RecordItem[]) => {
+  setRecords(newRecords);
+  localStorage.setItem("delegateRecords", JSON.stringify(newRecords));
+};
     setRecords(newRecords);
     localStorage.setItem("delegateRecords", JSON.stringify(newRecords));
   };
