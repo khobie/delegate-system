@@ -9,9 +9,9 @@ export default function Home() {
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [loginError, setLoginError] = useState("");
   
-  const [form, setForm] = useState<any>({});
-  const [stations, setStations] = useState<any[]>([]);
-  const [records, setRecords] = useState<any[]>([]);
+  const [form, setForm] = useState({});
+  const [stations, setStations] = useState([]);
+  const [records, setRecords] = useState([] as any);
   const [activeTab, setActiveTab] = useState("issue");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -23,12 +23,13 @@ export default function Home() {
         const response = await fetch(SCRIPT_URL + "?action=GET_ALL");
         const data = await response.json();
         if (data && Array.isArray(data)) {
-          setRecords(data.map((r, i) => ({ ...r, id: i + 1 })));
+          const mapped = data.map((r: any, i: number) => ({ ...r, id: i + 1 }));
+          setRecords(mapped as any);
         }
       } catch (e) {
         const saved = localStorage.getItem("delegateRecords");
         if (saved) {
-          setRecords(JSON.parse(saved));
+          setRecords(JSON.parse(saved) as any);
         }
       }
     };
