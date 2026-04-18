@@ -9,9 +9,9 @@ export default function Home() {
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [loginError, setLoginError] = useState("");
   
-  const [form, setForm] = useState({});
-  const [stations, setStations] = useState([]);
-  const [records, setRecords] = useState([]);
+  const [form, setForm] = useState<any>({});
+  const [stations, setStations] = useState<any[]>([]);
+  const [records, setRecords] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("issue");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
