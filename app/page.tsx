@@ -104,7 +104,7 @@ const saveRecords = (newRecords: RecordItem[]) => {
     setFilterPollingStation("");
   };
 
-  const uniquePositions = Array.from(new Set(records.map((r) => r.position).filter(Boolean)));
+  const positions = ["CHAIRMAN", "SECRETARY", "ORGANIZER", "WOMEN ORGANIZER", "YOUTH ORGANIZER", "COMMUNICATION OFFICER", "ELECTORAL AFFAIRS OFFICER"];
 
   const getFilteredRecordsByArea = () => {
     return records.filter((r) => {
@@ -315,9 +315,9 @@ const saveRecords = (newRecords: RecordItem[]) => {
                   className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none bg-white"
                   onChange={(e) => setForm({ ...form, position: e.target.value })}>
                   <option value="">Select Position</option>
-                  <option>CHAIRMAN</option><option>SECRETARY</option><option>ORGANIZER</option>
-                  <option>WOMEN ORGANIZER</option><option>YOUTH ORGANIZER</option>
-                  <option>COMMUNICATION OFFICER</option><option>ELECTORAL AFFAIRS OFFICER</option>
+                  {positions.map((pos, i) => (
+                    <option key={i}>{pos}</option>
+                  ))}
                 </select>
               </div>
 
@@ -409,7 +409,7 @@ const saveRecords = (newRecords: RecordItem[]) => {
                     <select value={filterPosition} onChange={(e) => setFilterPosition(e.target.value)}
                       className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none bg-white text-sm">
                       <option value="">All Positions</option>
-                      {uniquePositions.map((pos, i) => (
+                      {positions.map((pos, i) => (
                         <option key={i} value={pos}>{pos}</option>
                       ))}
                     </select>
