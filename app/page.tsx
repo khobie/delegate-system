@@ -16,6 +16,10 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("issue");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterElectoralArea, setFilterElectoralArea] = useState("");
+  const [filterPollingStation, setFilterPollingStation] = useState("");
+  const [filterPosition, setFilterPosition] = useState("");
+  const [filterStations, setFilterStations] = useState<{ name: string; code: string }[]>([]);
   const recordsPerPage = 20;
 
   useEffect(() => {
@@ -92,6 +96,27 @@ const saveRecords = (newRecords: RecordItem[]) => {
     const selectedStation = stations.find(s => s.name === e.target.value);
     setForm({ ...form, station: e.target.value, stationCode: selectedStation?.code || "" });
   };
+
+  const handleFilterAreaChange = (e: any) => {
+    const selected = electoralAreas.find((a) => a.name === e.target.value);
+    setFilterElectoralArea(e.target.value);
+    setFilterStations(selected ? selected.pollingStations : []);
+    setFilterPollingStation("");
+  };
+
+  const uniquePositions = Array.from(new Set(records.map((r) => r.position).filter(Boolean)));
+
+  const getFilteredRecordsByArea = () => {
+    return records.filter((r) => {
+      if (filterElectoralArea && r.electoralArea !== filterElectoralArea) return false;
+      if (filterPollingStation && r.station !== filterPollingStation) return false;
+      if (filterPosition && r.position !== filterPosition) return false;
+      return true;
+    });
+  };
+
+  const recordsFilteredByAnalytics = getFilteredRecordsByArea();
+  const analyticsCount = recordsFilteredByAnalytics.length;
 
   const handleSubmit = async () => {
     if (!form.surname || !form.firstname || !form.electoralArea || !form.station || !form.position) {
@@ -353,6 +378,48 @@ const saveRecords = (newRecords: RecordItem[]) => {
                   <div className="text-2xl font-bold">{stats.total}</div>
                   <div className="text-sm">Total</div>
                 </div>
+              </div>
+
+              <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h3 className="font-semibold text-slate-900 mb-3">Filter by Criteria</h3>
+                <div className="grid gap-3 md:grid-cols-3 mb-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Electoral Area</label>
+                    <select value={filterElectoralArea} onChange={handleFilterAreaChange}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none bg-white text-sm">
+                      <option value="">All Areas</option>
+                      {electoralAreas.map((area, index) => (
+                        <option key={index} value={area.name}>{area.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Polling Station</label>
+                    <select value={filterPollingStation} onChange={(e) => setFilterPollingStation(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none bg-white text-sm"
+                      disabled={filterStations.length === 0}>
+                      <option value="">All Stations</option>
+                      {filterStations.map((s, i) => (
+                        <option key={i} value={s.name}>{s.name} ({s.code})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Position</label>
+                    <select value={filterPosition} onChange={(e) => setFilterPosition(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none bg-white text-sm">
+                      <option value="">All Positions</option>
+                      {uniquePositions.map((pos, i) => (
+                        <option key={i} value={pos}>{pos}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {(filterElectoralArea || filterPollingStation || filterPosition) && (
+                  <div className="text-sm font-semibold text-blue-900">
+                    Total individuals with selected criteria: <span className="text-lg text-blue-700">{analyticsCount}</span>
+                  </div>
+                )}
               </div>
 
               <input placeholder="Search..." value={searchTerm}
