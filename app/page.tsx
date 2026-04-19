@@ -118,6 +118,47 @@ const saveRecords = (newRecords: RecordItem[]) => {
   const recordsFilteredByAnalytics = getFilteredRecordsByArea();
   const analyticsCount = recordsFilteredByAnalytics.length;
 
+  const handleExportToCSV = () => {
+    const dataToExport = recordsFilteredByAnalytics.length > 0 ? recordsFilteredByAnalytics : filteredRecords;
+    
+    if (dataToExport.length === 0) {
+      alert("No records to export");
+      return;
+    }
+
+    const headers = ["ID", "Surname", "First Name", "Middle Name", "Phone", "Age", "Electoral Area", "Polling Station", "Station Code", "Position", "Status", "Issued Date", "Returned Date"];
+    const rows = dataToExport.map((record) => [
+      record.id,
+      record.surname || "",
+      record.firstname || "",
+      record.middlename || "",
+      record.phone || "",
+      record.age || "",
+      record.electoralArea || "",
+      record.station || "",
+      record.stationCode || "",
+      record.position || "",
+      record.status || "",
+      record.issuedDate ? new Date(record.issuedDate).toLocaleDateString() : "",
+      record.returnedDate ? new Date(record.returnedDate).toLocaleDateString() : "",
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `delegate-records-${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleSubmit = async () => {
     if (!form.surname || !form.firstname || !form.electoralArea || !form.station || !form.position) {
       alert("Please fill in all required fields");
@@ -420,6 +461,9 @@ const saveRecords = (newRecords: RecordItem[]) => {
                     Total individuals with selected criteria: <span className="text-lg text-blue-700">{analyticsCount}</span>
                   </div>
                 )}
+                <button onClick={handleExportToCSV} className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-medium text-sm">
+                  Download as CSV
+                </button>
               </div>
 
               <input placeholder="Search..." value={searchTerm}
