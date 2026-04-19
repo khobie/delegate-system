@@ -21,6 +21,9 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("user");
   const [message, setMessage] = useState("");
+  const [currentUser, setCurrentUser] = useState<Account | null>(null);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("delegateAccounts");
@@ -43,6 +46,22 @@ export default function AdminPage() {
         setRecords([]);
       }
     }
+
+    const savedUser = localStorage.getItem("currentUser");
+    if (savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser) as Account;
+        setCurrentUser(parsedUser);
+        setIsAuthorized(parsedUser.role === "admin");
+      } catch {
+        setCurrentUser(null);
+        setIsAuthorized(false);
+      }
+    } else {
+      setIsAuthorized(false);
+    }
+
+    setAuthChecked(true);
   }, []);
 
   const persistAccounts = (newAccounts: Account[]) => {
@@ -91,6 +110,34 @@ export default function AdminPage() {
     localStorage.setItem("delegateRecords", JSON.stringify(newRecords));
   };
 
+  const stats = {
+    issued: records.filter(r => r.status === "ISSUED").length,
+    returned: records.filter(r => r.status === "RETURNED").length,
+    total: records.length
+  };
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+        <p className="text-lg">Checking access...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-red-800 py-8 px-4 flex items-center justify-center">
+        <div className="max-w-xl w-full bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl p-8 text-center">
+          <h1 className="text-2xl font-bold text-slate-900 mb-4">Access Denied</h1>
+          <p className="text-slate-600 mb-6">You do not have permission to access the admin dashboard.</p>
+          <Link href="/" className="inline-block bg-blue-900 text-white px-6 py-3 rounded-lg hover:bg-blue-800">
+            Back to Issuance
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const handleToggleRecordSelection = (id: string) => {
     setSelectedRecordIds((current) =>
       current.includes(id) ? current.filter((selectedId) => selectedId !== id) : [...current, id]
@@ -135,6 +182,21 @@ export default function AdminPage() {
                 {message}
               </div>
             )}
+
+            <div className="flex gap-4 mb-6">
+              <div className="flex-1 bg-slate-100 p-4 text-center rounded-lg">
+                <div className="text-2xl font-bold text-blue-900">{stats.issued}</div>
+                <div className="text-sm">Issued</div>
+              </div>
+              <div className="flex-1 bg-slate-100 p-4 text-center rounded-lg">
+                <div className="text-2xl font-bold text-red-700">{stats.returned}</div>
+                <div className="text-sm">Returned</div>
+              </div>
+              <div className="flex-1 bg-slate-100 p-4 text-center rounded-lg">
+                <div className="text-2xl font-bold">{stats.total}</div>
+                <div className="text-sm">Total Forms Issued</div>
+              </div>
+            </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="md:col-span-2 space-y-4">

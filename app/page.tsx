@@ -3,12 +3,25 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { electoralAreas } from "../data/electoralData";
 
+type Account = {
+  id?: string;
+  username: string;
+  password: string;
+  role: string;
+};
+
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbweATVBSJKIP5GuyJ6r_5QrDGMavi_cl_el2YFvtDlE-PS9vj9wkYidxDjBd7nhOlJZ/exec";
+
+const DEFAULT_ACCOUNTS: Account[] = [
+  { username: "admin", password: "delegate123", role: "admin" },
+];
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [loginError, setLoginError] = useState("");
+  const [currentUser, setCurrentUser] = useState<Account | null>(null);
+  const [accounts, setAccounts] = useState<Account[]>(DEFAULT_ACCOUNTS);
   
   const [form, setForm] = useState<Record<string, any>>({});
   const [stations, setStations] = useState<{ name: string; code: string }[]>([]);
@@ -51,10 +64,32 @@ export default function Home() {
     };
     
     fetchRecords();
-    
+
+    const savedAccounts = localStorage.getItem("delegateAccounts");
+    if (savedAccounts) {
+      try {
+        const parsed = JSON.parse(savedAccounts) as Account[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setAccounts(parsed);
+        }
+      } catch {
+        setAccounts(DEFAULT_ACCOUNTS);
+        localStorage.setItem("delegateAccounts", JSON.stringify(DEFAULT_ACCOUNTS));
+      }
+    } else {
+      localStorage.setItem("delegateAccounts", JSON.stringify(DEFAULT_ACCOUNTS));
+    }
+
     const loggedIn = localStorage.getItem("isLoggedIn");
-    if (loggedIn === "true") {
-      setIsLoggedIn(true);
+    const savedUser = localStorage.getItem("currentUser");
+    if (loggedIn === "true" && savedUser) {
+      try {
+        setCurrentUser(JSON.parse(savedUser) as Account);
+        setIsLoggedIn(true);
+      } catch {
+        setIsLoggedIn(false);
+        localStorage.removeItem("currentUser");
+      }
     }
   }, []);
 
@@ -69,18 +104,27 @@ const saveRecords = (newRecords: RecordItem[]) => {
 };
 
   const handleLogin = () => {
-    if (loginForm.username === "admin" && loginForm.password === "delegate123") {
+    const matchingAccount = accounts.find(
+      (account) => account.username === loginForm.username && account.password === loginForm.password
+    );
+
+    if (matchingAccount) {
       setIsLoggedIn(true);
+      setCurrentUser(matchingAccount);
       localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("currentUser", JSON.stringify(matchingAccount));
       setLoginError("");
-    } else {
-      setLoginError("Invalid username or password");
+      return;
     }
+
+    setLoginError("Invalid username or password");
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setCurrentUser(null);
     localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("currentUser");
     setActiveTab("issue");
     setSearchTerm("");
     setCurrentPage(1);
@@ -244,13 +288,13 @@ const saveRecords = (newRecords: RecordItem[]) => {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Username</label>
               <input type="text" value={loginForm.username} placeholder="Enter username"
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none text-slate-900"
                 onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
               <input type="password" value={loginForm.password} placeholder="Enter password"
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none text-slate-900"
                 onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} />
             </div>
             {loginError && <p className="text-red-600 text-sm">{loginError}</p>}
@@ -258,7 +302,7 @@ const saveRecords = (newRecords: RecordItem[]) => {
               onClick={handleLogin}>Login</button>
           </div>
           
-          <p className="text-xs text-slate-500 text-center mt-4">Default: admin / delegate123</p>
+          <p className="text-xs text-slate-500 text-center mt-4">Use admin / delegate123 or any account created in the Admin Dashboard.</p>
         </div>
       </div>
     );
