@@ -221,6 +221,7 @@ const saveRecords = (newRecords: RecordItem[]) => {
       returnedDate: null,
     };
 
+    let savedRemotely = false;
     try {
       await fetch(SCRIPT_URL, {
         method: "POST",
@@ -239,31 +240,35 @@ const saveRecords = (newRecords: RecordItem[]) => {
           action: "ISSUE"
         }),
       });
+      savedRemotely = true;
     } catch (e) {
-      console.log("Offline mode");
+      console.log("Offline mode - saving locally");
     }
 
     saveRecords([newRecord, ...records]);
     setForm({});
     setStations([]);
-    alert("Form issued successfully!");
+    alert(savedRemotely ? "Form issued successfully!" : "Form saved locally (offline mode)!");
   };
 
   const handleReturn = async (id: any) => {
     const record = records.find(r => r.id === id);
+    let savedRemotely = false;
     try {
       await fetch(SCRIPT_URL, {
         method: "POST",
         body: JSON.stringify({ phone: record.phone, action: "RETURN" }),
       });
+      savedRemotely = true;
     } catch (e) {
-      console.log("Offline mode");
+      console.log("Offline mode - return saved locally");
     }
 
     const updated = records.map(r => 
       r.id === id ? { ...r, status: "RETURNED", returnedDate: new Date().toISOString() } : r
     );
     saveRecords(updated);
+    alert(savedRemotely ? "Form returned successfully!" : "Form return saved locally (offline mode)!");
   };
 
   const filteredRecords = records.filter(r => 
