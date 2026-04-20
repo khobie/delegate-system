@@ -145,6 +145,21 @@ export default function AdminPage() {
       acc[r.delegateType] = (acc[r.delegateType] || 0) + 1;
       return acc;
     }, {} as Record<string, number>),
+    contests: records.reduce((acc, r) => {
+      const key = `${r.electoralArea}|${r.station}|${r.position}`;
+      if (!acc[key]) {
+        acc[key] = {
+          electoralArea: r.electoralArea,
+          station: r.station,
+          position: r.position,
+          count: 0,
+          candidates: []
+        };
+      }
+      acc[key].count += 1;
+      acc[key].candidates.push(`${r.surname} ${r.firstname}${r.middlename ? ' ' + r.middlename : ''}`);
+      return acc;
+    }, {} as Record<string, { electoralArea: string; station: string; position: string; count: number; candidates: string[] }>),
     recentActivity: records
       .sort((a, b) => new Date(b.issuedDate || 0).getTime() - new Date(a.issuedDate || 0).getTime())
       .slice(0, 5)
@@ -342,6 +357,55 @@ export default function AdminPage() {
                     {new Date().toLocaleDateString()}
                   </div>
                   <div className="text-sm text-slate-600">Last Updated</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Contests Section */}
+            <div className="bg-white rounded-lg border border-slate-200 p-4 mb-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Election Contests</h3>
+              <p className="text-sm text-slate-600 mb-4">
+                Polling stations where multiple candidates have purchased forms for the same position
+              </p>
+              
+              {Object.values(stats.contests).filter(contest => contest.count > 1).length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <div className="text-4xl mb-2">✅</div>
+                  <p>No contests detected</p>
+                  <p className="text-sm">All positions have single candidates</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {Object.values(stats.contests)
+                    .filter(contest => contest.count > 1)
+                    .sort((a, b) => b.count - a.count)
+                    .map((contest, index) => (
+                      <div key={index} className="border border-red-200 bg-red-50 rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h4 className="font-semibold text-slate-900">
+                              {contest.electoralArea} • {contest.station}
+                            </h4>
+                            <p className="text-sm text-slate-600">{contest.position}</p>
+                          </div>
+                          <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+                            {contest.count} candidates
+                          </div>
+                        </div>
+                        <div className="text-sm text-slate-700">
+                          <strong>Candidates:</strong> {contest.candidates.join(", ")}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+              
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <div className="flex justify-between text-sm text-slate-600">
+                  <span>Total contests detected:</span>
+                  <span className="font-medium">
+                    {Object.values(stats.contests).filter(contest => contest.count > 1).length}
+                  </span>
                 </div>
               </div>
             </div>
