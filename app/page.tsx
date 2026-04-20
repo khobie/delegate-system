@@ -94,6 +94,12 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    if (currentUser && currentUser.role !== "admin" && activeTab !== "issue") {
+      setActiveTab("issue");
+    }
+  }, [currentUser, activeTab]);
+
   type RecordItem = {
   id?: number;
   [key: string]: any;
@@ -329,17 +335,23 @@ const saveRecords = (newRecords: RecordItem[]) => {
               <p className="text-red-100 text-sm">Constituency Form Issuance System</p>
             </div>
             <div className="flex gap-3">
-              <Link href="/admin" className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm">
-                Admin Dashboard
-              </Link>
+              {currentUser?.role === "admin" && (
+                <Link href="/admin" className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm">
+                  Admin Dashboard
+                </Link>
+              )}
               <button onClick={handleLogout} className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm">Logout</button>
             </div>
           </div>
           
           <div className="flex border-b border-slate-200">
             <button onClick={() => setActiveTab("issue")} className={`px-6 py-3 font-medium ${activeTab === "issue" ? "border-b-2 border-red-800 text-red-800" : "text-slate-500"}`}>Issue Form</button>
-            <button onClick={() => setActiveTab("return")} className={`px-6 py-3 font-medium ${activeTab === "return" ? "border-b-2 border-red-800 text-red-800" : "text-slate-500"}`}>Return Form</button>
-            <button onClick={() => setActiveTab("records")} className={`px-6 py-3 font-medium ${activeTab === "records" ? "border-b-2 border-red-800 text-red-800" : "text-slate-500"}`}>Records</button>
+            {currentUser?.role === "admin" && (
+              <>
+                <button onClick={() => setActiveTab("return")} className={`px-6 py-3 font-medium ${activeTab === "return" ? "border-b-2 border-red-800 text-red-800" : "text-slate-500"}`}>Return Form</button>
+                <button onClick={() => setActiveTab("records")} className={`px-6 py-3 font-medium ${activeTab === "records" ? "border-b-2 border-red-800 text-red-800" : "text-slate-500"}`}>Records</button>
+              </>
+            )}
           </div>
 
           {activeTab === "issue" && (
@@ -546,9 +558,11 @@ const saveRecords = (newRecords: RecordItem[]) => {
                     Total individuals with selected criteria: <span className="text-lg text-blue-700">{analyticsCount}</span>
                   </div>
                 )}
-                <button onClick={handleExportToCSV} className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-medium text-sm">
-                  Download as CSV
-                </button>
+                {currentUser?.role === "admin" && (
+                  <button onClick={handleExportToCSV} className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-medium text-sm">
+                    Download as CSV
+                  </button>
+                )}
               </div>
 
               <input placeholder="Search..." value={searchTerm}
