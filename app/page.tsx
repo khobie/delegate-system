@@ -217,6 +217,13 @@ const saveRecords = (newRecords: RecordItem[]) => {
       return;
     }
 
+    // Check for duplicate phone number
+    const existingRecord = records.find(r => r.phone === form.phone);
+    if (existingRecord) {
+      alert(`A delegate with phone number ${form.phone} already exists!\n\nExisting record:\n${existingRecord.surname} ${existingRecord.firstname}\nPosition: ${existingRecord.position}\nStatus: ${existingRecord.status}\n\nPlease verify if this is a different person or update the existing record.`);
+      return;
+    }
+
     const newRecord = {
       id: Date.now(),
       ...form,
@@ -377,7 +384,7 @@ const saveRecords = (newRecords: RecordItem[]) => {
               <div className="grid grid-cols-2 gap-4 mb-5">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone Number *</label>
-                  <input type="tel" value={form.phone || ""} placeholder="Mobile number (10 digits)"
+                  <input type="tel" value={form.phone || ""} placeholder="Mobile number (10 digits, must be unique)"
                     required
                     pattern="[0-9]{10}"
                     title="Phone number must be exactly 10 digits"

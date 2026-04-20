@@ -204,6 +204,13 @@ export default function AdminPage() {
   const handleSaveEdit = async () => {
     if (!editingRecord) return;
 
+    // Check for duplicate phone number (excluding current record)
+    const existingRecord = records.find(r => r.phone === editForm.phone && r.id !== editingRecord.id);
+    if (existingRecord) {
+      alert(`A delegate with phone number ${editForm.phone} already exists!\n\nExisting record:\n${existingRecord.surname} ${existingRecord.firstname}\nPosition: ${existingRecord.position}\nStatus: ${existingRecord.status}\n\nPlease use a different phone number.`);
+      return;
+    }
+
     const updatedRecords = records.map(r => 
       r.id === editingRecord.id ? { ...r, ...editForm } : r
     );
@@ -530,6 +537,7 @@ export default function AdminPage() {
                         type="tel"
                         value={editForm.phone || ""}
                         onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                        placeholder="Phone number (must be unique)"
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                       />
                     </div>
