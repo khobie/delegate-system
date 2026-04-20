@@ -38,16 +38,6 @@ export default function Home() {
 
   useEffect(() => {
     const fetchRecords = async () => {
-      const saved = localStorage.getItem("delegateRecords");
-      if (saved !== null) {
-        try {
-          setRecords(JSON.parse(saved) as any);
-          return;
-        } catch {
-          // ignore invalid local storage and continue to fetch remote records
-        }
-      }
-
       try {
         const response = await fetch(SCRIPT_URL + "?action=GET_ALL");
         const data = await response.json();
@@ -55,11 +45,19 @@ export default function Home() {
           const mapped = data.map((r: any, i: number) => ({ ...r, id: i + 1 }));
           setRecords(mapped as any);
           localStorage.setItem("delegateRecords", JSON.stringify(mapped));
+          return;
         }
       } catch (e) {
-        const fallback = localStorage.getItem("delegateRecords");
-        if (fallback) {
-          setRecords(JSON.parse(fallback) as any);
+        console.log("Failed to fetch remote records, using local storage");
+      }
+
+      // Fallback to localStorage
+      const saved = localStorage.getItem("delegateRecords");
+      if (saved) {
+        try {
+          setRecords(JSON.parse(saved) as any);
+        } catch {
+          setRecords([]);
         }
       }
     };
