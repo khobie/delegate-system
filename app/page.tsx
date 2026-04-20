@@ -319,7 +319,6 @@ const saveRecords = (newRecords: RecordItem[]) => {
               onClick={handleLogin}>Login</button>
           </div>
           
-          <p className="text-xs text-slate-500 text-center mt-4">Use admin / delegate123 or any account created in the Admin Dashboard.</p>
         </div>
       </div>
     );
