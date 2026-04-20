@@ -113,7 +113,24 @@ export default function AdminPage() {
   const stats = {
     issued: records.filter(r => r.status === "ISSUED").length,
     returned: records.filter(r => r.status === "RETURNED").length,
-    total: records.length
+    total: records.length,
+    pending: records.filter(r => r.status === "ISSUED").length - records.filter(r => r.status === "RETURNED").length,
+    returnRate: records.length > 0 ? Math.round((records.filter(r => r.status === "RETURNED").length / records.length) * 100) : 0,
+    byArea: records.reduce((acc, r) => {
+      acc[r.electoralArea] = (acc[r.electoralArea] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>),
+    byPosition: records.reduce((acc, r) => {
+      acc[r.position] = (acc[r.position] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>),
+    byDelegateType: records.reduce((acc, r) => {
+      acc[r.delegateType] = (acc[r.delegateType] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>),
+    recentActivity: records
+      .sort((a, b) => new Date(b.issuedDate || 0).getTime() - new Date(a.issuedDate || 0).getTime())
+      .slice(0, 5)
   };
 
   if (!authChecked) {
@@ -162,6 +179,45 @@ export default function AdminPage() {
     setMessage("All delegate records have been cleared.");
   };
 
+  const handleExportDashboardData = () => {
+    const dashboardData = {
+      summary: {
+        totalIssued: stats.issued,
+        totalReturned: stats.returned,
+        pendingReturns: stats.pending,
+        returnRate: `${stats.returnRate}%`,
+        totalRecords: stats.total,
+        activeAccounts: accounts.length
+      },
+      byArea: stats.byArea,
+      byPosition: stats.byPosition,
+      byDelegateType: stats.byDelegateType,
+      recentActivity: stats.recentActivity.map(r => ({
+        name: `${r.surname} ${r.firstname}`,
+        position: r.position,
+        delegateType: r.delegateType,
+        status: r.status,
+        issuedDate: r.issuedDate,
+        returnedDate: r.returnedDate
+      })),
+      accounts: accounts.map(a => ({
+        username: a.username,
+        role: a.role
+      })),
+      generatedAt: new Date().toISOString()
+    };
+
+    const dataStr = JSON.stringify(dashboardData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `dashboard-data-${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-red-800 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -183,18 +239,109 @@ export default function AdminPage() {
               </div>
             )}
 
-            <div className="flex gap-4 mb-6">
-              <div className="flex-1 bg-slate-100 p-4 text-center rounded-lg">
-                <div className="text-2xl font-bold text-blue-900">{stats.issued}</div>
-                <div className="text-sm">Issued</div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-4 text-center rounded-lg text-white">
+                <div className="text-3xl font-bold">{stats.issued}</div>
+                <div className="text-sm opacity-90">Forms Issued</div>
               </div>
-              <div className="flex-1 bg-slate-100 p-4 text-center rounded-lg">
-                <div className="text-2xl font-bold text-red-700">{stats.returned}</div>
-                <div className="text-sm">Returned</div>
+              <div className="bg-gradient-to-br from-green-500 to-green-600 p-4 text-center rounded-lg text-white">
+                <div className="text-3xl font-bold">{stats.returned}</div>
+                <div className="text-sm opacity-90">Forms Returned</div>
               </div>
-              <div className="flex-1 bg-slate-100 p-4 text-center rounded-lg">
-                <div className="text-2xl font-bold">{stats.total}</div>
-                <div className="text-sm">Total Forms Issued</div>
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-4 text-center rounded-lg text-white">
+                <div className="text-3xl font-bold">{stats.pending}</div>
+                <div className="text-sm opacity-90">Pending Returns</div>
+              </div>
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-4 text-center rounded-lg text-white">
+                <div className="text-3xl font-bold">{stats.returnRate}%</div>
+                <div className="text-sm opacity-90">Return Rate</div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg border border-slate-200 p-4 mb-6">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-semibold text-slate-900">System Status</h3>
+                <button
+                  onClick={handleExportDashboardData}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                >
+                  Export Dashboard Data
+                </button>
+              </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{accounts.length}</div>
+                  <div className="text-sm text-slate-600">Active Accounts</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{records.length}</div>
+                  <div className="text-sm text-slate-600">Total Records</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {new Date().toLocaleDateString()}
+                  </div>
+                  <div className="text-sm text-slate-600">Last Updated</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 mb-6">
+              <div className="bg-white rounded-lg border border-slate-200 p-4">
+                <h3 className="text-lg font-semibold text-slate-900 mb-3">Distribution by Electoral Area</h3>
+                <div className="space-y-2">
+                  {Object.entries(stats.byArea).length === 0 ? (
+                    <p className="text-sm text-slate-500">No data available</p>
+                  ) : (
+                    Object.entries(stats.byArea)
+                      .sort(([,a], [,b]) => b - a)
+                      .slice(0, 5)
+                      .map(([area, count]) => (
+                        <div key={area} className="flex justify-between items-center">
+                          <span className="text-sm text-slate-700 truncate mr-2">{area}</span>
+                          <span className="text-sm font-semibold text-slate-900 bg-slate-100 px-2 py-1 rounded">{count}</span>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg border border-slate-200 p-4">
+                <h3 className="text-lg font-semibold text-slate-900 mb-3">Distribution by Position</h3>
+                <div className="space-y-2">
+                  {Object.entries(stats.byPosition).length === 0 ? (
+                    <p className="text-sm text-slate-500">No data available</p>
+                  ) : (
+                    Object.entries(stats.byPosition)
+                      .sort(([,a], [,b]) => b - a)
+                      .map(([position, count]) => (
+                        <div key={position} className="flex justify-between items-center">
+                          <span className="text-sm text-slate-700 truncate mr-2">{position}</span>
+                          <span className="text-sm font-semibold text-slate-900 bg-slate-100 px-2 py-1 rounded">{count}</span>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg border border-slate-200 p-4 mb-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-3">System Status</h3>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{accounts.length}</div>
+                  <div className="text-sm text-slate-600">Active Accounts</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{records.length}</div>
+                  <div className="text-sm text-slate-600">Total Records</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {new Date().toLocaleDateString()}
+                  </div>
+                  <div className="text-sm text-slate-600">Last Updated</div>
+                </div>
               </div>
             </div>
 
