@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6xQ3q41bzRYMgNyvqCbCvzmosNM4Fc1COcUVvxy5VTRsJ4qpN_d0BNtF430Ki3DnT/exec";
+
 type Account = {
   id: string;
   username: string;
@@ -24,6 +26,9 @@ export default function AdminPage() {
   const [currentUser, setCurrentUser] = useState<Account | null>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [editingRecord, setEditingRecord] = useState<Record<string, any> | null>(null);
+  const [editForm, setEditForm] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const saved = localStorage.getItem("delegateAccounts");
@@ -110,6 +115,18 @@ export default function AdminPage() {
     localStorage.setItem("delegateRecords", JSON.stringify(newRecords));
   };
 
+  const filteredRecords = records.filter(r => 
+    !searchTerm || 
+    r.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.firstname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.middlename?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.phone?.includes(searchTerm) ||
+    r.electoralArea?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.station?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.delegateType?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const stats = {
     issued: records.filter(r => r.status === "ISSUED").length,
     returned: records.filter(r => r.status === "RETURNED").length,
@@ -177,6 +194,42 @@ export default function AdminPage() {
     persistRecords([]);
     setSelectedRecordIds([]);
     setMessage("All delegate records have been cleared.");
+  };
+
+  const handleEditRecord = (record: Record<string, any>) => {
+    setEditingRecord(record);
+    setEditForm({ ...record });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingRecord) return;
+
+    const updatedRecords = records.map(r => 
+      r.id === editingRecord.id ? { ...r, ...editForm } : r
+    );
+    
+    // Try to update Google Sheets
+    try {
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          ...editForm,
+          action: "UPDATE"
+        }),
+      });
+    } catch (e) {
+      console.log("Offline mode - update saved locally");
+    }
+
+    persistRecords(updatedRecords);
+    setEditingRecord(null);
+    setEditForm({});
+    setMessage("Record updated successfully!");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRecord(null);
+    setEditForm({});
   };
 
   const handleExportDashboardData = () => {
@@ -432,29 +485,139 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">Delegate Records</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-slate-900">Delegate Records</h2>
+                <input
+                  type="text"
+                  placeholder="Search records..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              
+              {editingRecord && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Edit Record</h3>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Surname</label>
+                      <input
+                        value={editForm.surname || ""}
+                        onChange={(e) => setEditForm({ ...editForm, surname: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+                      <input
+                        value={editForm.firstname || ""}
+                        onChange={(e) => setEditForm({ ...editForm, firstname: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Middle Name</label>
+                      <input
+                        value={editForm.middlename || ""}
+                        onChange={(e) => setEditForm({ ...editForm, middlename: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                      <input
+                        type="tel"
+                        value={editForm.phone || ""}
+                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Age</label>
+                      <input
+                        type="number"
+                        value={editForm.age || ""}
+                        onChange={(e) => setEditForm({ ...editForm, age: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Position</label>
+                      <select
+                        value={editForm.position || ""}
+                        onChange={(e) => setEditForm({ ...editForm, position: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                      >
+                        <option value="">Select Position</option>
+                        {["CHAIRMAN", "SECRETARY", "ORGANIZER", "WOMEN ORGANIZER", "YOUTH ORGANIZER", "COMMUNICATION OFFICER", "ELECTORAL AFFAIRS OFFICER"].map((pos) => (
+                          <option key={pos} value={pos}>{pos}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Delegate Type</label>
+                      <select
+                        value={editForm.delegateType || ""}
+                        onChange={(e) => setEditForm({ ...editForm, delegateType: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                      >
+                        <option value="">Select Type</option>
+                        <option value="Old Delegate">Old Delegate</option>
+                        <option value="New Delegate">New Delegate</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveEdit}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium"
+                    >
+                      Save Changes
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-3">
-                {records.length === 0 ? (
+                {filteredRecords.length === 0 ? (
                   <p className="text-sm text-slate-500">No delegate records found.</p>
                 ) : (
-                  records.slice(0, 8).map((record) => (
-                    <label key={record.id} className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white p-4">
+                  filteredRecords.slice(0, 10).map((record) => (
+                    <div key={record.id} className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white p-4">
                       <input
                         type="checkbox"
                         checked={selectedRecordIds.includes(String(record.id))}
                         onChange={() => handleToggleRecordSelection(String(record.id))}
                         className="h-4 w-4 text-blue-600 border-slate-300 rounded"
                       />
-                      <div>
-                        <p className="font-semibold text-slate-900">{record.surname || record.firstname || "Unnamed"}</p>
-                        <p className="text-sm text-slate-500">{record.electoralArea || "No area"} • {record.station || "No station"} • {record.position || "No position"} • {record.delegateType || "No type"}</p>
+                      <div className="flex-1">
+                        <p className="font-semibold text-slate-900">{record.surname} {record.firstname} {record.middlename || ""}</p>
+                        <p className="text-sm text-slate-500">
+                          {record.electoralArea} • {record.station} • {record.position} • {record.delegateType}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          Phone: {record.phone || "N/A"} • Age: {record.age || "N/A"} • Status: {record.status}
+                        </p>
                       </div>
-                    </label>
+                      <button
+                        onClick={() => handleEditRecord(record)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium"
+                      >
+                        Edit
+                      </button>
+                    </div>
                   ))
                 )}
               </div>
-              {records.length > 8 && (
-                <p className="mt-3 text-xs text-slate-500">Showing first 8 records for selection.</p>
+              {filteredRecords.length > 10 && (
+                <p className="mt-3 text-xs text-slate-500">Showing first 10 matching records.</p>
               )}
             </div>
           </div>
