@@ -120,7 +120,7 @@ export default function AdminPage() {
     r.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     r.firstname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     r.middlename?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.phone?.includes(searchTerm) ||
+    String(r.phone || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     r.electoralArea?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     r.station?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     r.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
