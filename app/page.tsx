@@ -142,8 +142,8 @@ const saveRecords = (newRecords: RecordItem[]) => {
   };
 
   const handleStationChange = (e: any) => {
-    const selectedStation = stations.find(s => s.name === e.target.value);
-    setForm({ ...form, station: e.target.value, stationCode: selectedStation?.code || "" });
+    const selectedStation = stations.find(s => s.code === e.target.value);
+    setForm({ ...form, station: selectedStation?.name || "", stationCode: e.target.value });
   };
 
   const handleFilterAreaChange = (e: any) => {
@@ -406,12 +406,12 @@ const saveRecords = (newRecords: RecordItem[]) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Polling Station *</label>
-                  <select value={form.station || ""}
+                  <select value={form.stationCode || ""}
                     className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none bg-white"
                     onChange={handleStationChange} disabled={stations.length === 0}>
                     <option value="">Select Polling Station</option>
                     {stations.map((s, i) => (
-                      <option key={i} value={s.name}>{s.name} ({s.code})</option>
+                      <option key={i} value={s.code}>{s.name} ({s.code})</option>
                     ))}
                   </select>
                 </div>
