@@ -29,6 +29,8 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingRecord, setEditingRecord] = useState<Record<string, any> | null>(null);
   const [editForm, setEditForm] = useState<Record<string, any>>({});
+  const [selectedElectoralArea, setSelectedElectoralArea] = useState<string>("");
+  const [selectedPollingStation, setSelectedPollingStation] = useState<string>("");
 
   useEffect(() => {
     const saved = localStorage.getItem("delegateAccounts");
@@ -116,15 +118,17 @@ export default function AdminPage() {
   };
 
   const filteredRecords = records.filter(r => 
-    !searchTerm || 
-    r.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.firstname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.middlename?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    String(r.phone || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.electoralArea?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.station?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.delegateType?.toLowerCase().includes(searchTerm.toLowerCase())
+    (!searchTerm || 
+     r.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     r.firstname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     r.middlename?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     String(r.phone || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+     r.electoralArea?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     r.station?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     r.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     r.delegateType?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    (!selectedElectoralArea || r.electoralArea === selectedElectoralArea) &&
+    (!selectedPollingStation || r.station === selectedPollingStation)
   );
 
   const stats = {
@@ -363,10 +367,42 @@ export default function AdminPage() {
 
             {/* Contests Section */}
             <div className="bg-white rounded-lg border border-slate-200 p-4 mb-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Election Contests</h3>
-              <p className="text-sm text-slate-600 mb-4">
-                Polling stations where multiple candidates have purchased forms for the same position
-              </p>
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Election Contests</h3>
+                  <p className="text-sm text-slate-600">
+                    Polling stations where multiple candidates have purchased forms for the same position
+                  </p>
+                </div>
+                {(selectedElectoralArea || selectedPollingStation) && (
+                  <button
+                    onClick={() => {
+                      setSelectedElectoralArea("");
+                      setSelectedPollingStation("");
+                    }}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded-lg text-sm font-medium"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+              
+              {selectedElectoralArea && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-blue-800">
+                      <strong>Filtered by:</strong> {selectedElectoralArea}
+                      {selectedPollingStation && ` • ${selectedPollingStation}`}
+                    </span>
+                    <button
+                      onClick={() => setSelectedPollingStation("")}
+                      className="text-blue-600 hover:text-blue-800 text-sm underline"
+                    >
+                      Show all stations
+                    </button>
+                  </div>
+                </div>
+              )}
               
               {Object.values(stats.contests).filter(contest => contest.count > 1).length === 0 ? (
                 <div className="text-center py-8 text-slate-500">
@@ -378,15 +414,32 @@ export default function AdminPage() {
                 <div className="space-y-3">
                   {Object.values(stats.contests)
                     .filter(contest => contest.count > 1)
+                    .filter(contest => 
+                      (!selectedElectoralArea || contest.electoralArea === selectedElectoralArea) &&
+                      (!selectedPollingStation || contest.station === selectedPollingStation)
+                    )
                     .sort((a, b) => b.count - a.count)
                     .map((contest, index) => (
                       <div key={index} className="border border-red-200 bg-red-50 rounded-lg p-4">
                         <div className="flex justify-between items-start mb-2">
                           <div>
-                            <h4 className="font-semibold text-slate-900">
-                              {contest.electoralArea} • {contest.station}
-                            </h4>
-                            <p className="text-sm text-slate-600">{contest.position}</p>
+                            <button
+                              onClick={() => setSelectedElectoralArea(contest.electoralArea)}
+                              className="font-semibold text-blue-600 hover:text-blue-800 hover:underline text-left"
+                            >
+                              {contest.electoralArea}
+                            </button>
+                            <span className="text-slate-400 mx-2">•</span>
+                            <button
+                              onClick={() => {
+                                setSelectedElectoralArea(contest.electoralArea);
+                                setSelectedPollingStation(contest.station);
+                              }}
+                              className="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                            >
+                              {contest.station}
+                            </button>
+                            <p className="text-sm text-slate-600 mt-1">{contest.position}</p>
                           </div>
                           <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
                             {contest.count} candidates
@@ -407,12 +460,35 @@ export default function AdminPage() {
                     {Object.values(stats.contests).filter(contest => contest.count > 1).length}
                   </span>
                 </div>
+                {(selectedElectoralArea || selectedPollingStation) && (
+                  <div className="flex justify-between text-sm text-slate-600 mt-2">
+                    <span>Filtered contests:</span>
+                    <span className="font-medium">
+                      {Object.values(stats.contests)
+                        .filter(contest => contest.count > 1)
+                        .filter(contest => 
+                          (!selectedElectoralArea || contest.electoralArea === selectedElectoralArea) &&
+                          (!selectedPollingStation || contest.station === selectedPollingStation)
+                        ).length}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 mb-6">
               <div className="bg-white rounded-lg border border-slate-200 p-4">
-                <h3 className="text-lg font-semibold text-slate-900 mb-3">Distribution by Electoral Area</h3>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-lg font-semibold text-slate-900">Distribution by Electoral Area</h3>
+                  {selectedElectoralArea && (
+                    <button
+                      onClick={() => setSelectedElectoralArea("")}
+                      className="text-sm text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </div>
                 <div className="space-y-2">
                   {Object.entries(stats.byArea).length === 0 ? (
                     <p className="text-sm text-slate-500">No data available</p>
@@ -422,7 +498,14 @@ export default function AdminPage() {
                       .slice(0, 5)
                       .map(([area, count]) => (
                         <div key={area} className="flex justify-between items-center">
-                          <span className="text-sm text-slate-700 truncate mr-2">{area}</span>
+                          <button
+                            onClick={() => setSelectedElectoralArea(area)}
+                            className={`text-sm truncate mr-2 text-left hover:text-blue-600 hover:underline ${
+                              selectedElectoralArea === area ? 'text-blue-600 font-medium' : 'text-slate-700'
+                            }`}
+                          >
+                            {area}
+                          </button>
                           <span className="text-sm font-semibold text-slate-900 bg-slate-100 px-2 py-1 rounded">{count}</span>
                         </div>
                       ))
@@ -557,7 +640,24 @@ export default function AdminPage() {
 
             <div>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-slate-900">Delegate Records</h2>
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">Delegate Records</h2>
+                  {(selectedElectoralArea || selectedPollingStation) && (
+                    <p className="text-sm text-blue-600 mt-1">
+                      Filtered: {selectedElectoralArea}
+                      {selectedPollingStation && ` • ${selectedPollingStation}`}
+                      <button
+                        onClick={() => {
+                          setSelectedElectoralArea("");
+                          setSelectedPollingStation("");
+                        }}
+                        className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs"
+                      >
+                        (clear)
+                      </button>
+                    </p>
+                  )}
+                </div>
                 <input
                   type="text"
                   placeholder="Search records..."
