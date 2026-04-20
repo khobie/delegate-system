@@ -10,7 +10,7 @@ type Account = {
   role: string;
 };
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbweATVBSJKIP5GuyJ6r_5QrDGMavi_cl_el2YFvtDlE-PS9vj9wkYidxDjBd7nhOlJZ/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6xQ3q41bzRYMgNyvqCbCvzmosNM4Fc1COcUVvxy5VTRsJ4qpN_d0BNtF430Ki3DnT/exec";
 
 const DEFAULT_ACCOUNTS: Account[] = [
   { username: "admin", password: "delegate123", role: "admin" },
@@ -32,6 +32,7 @@ export default function Home() {
   const [filterElectoralArea, setFilterElectoralArea] = useState("");
   const [filterPollingStation, setFilterPollingStation] = useState("");
   const [filterPosition, setFilterPosition] = useState("");
+  const [filterDelegateType, setFilterDelegateType] = useState("");
   const [filterStations, setFilterStations] = useState<{ name: string; code: string }[]>([]);
   const recordsPerPage = 20;
 
@@ -149,12 +150,14 @@ const saveRecords = (newRecords: RecordItem[]) => {
   };
 
   const positions = ["CHAIRMAN", "SECRETARY", "ORGANIZER", "WOMEN ORGANIZER", "YOUTH ORGANIZER", "COMMUNICATION OFFICER", "ELECTORAL AFFAIRS OFFICER"];
+  const delegateTypes = ["Old Delegate", "New Delegate"];
 
   const getFilteredRecordsByArea = () => {
     return records.filter((r) => {
       if (filterElectoralArea && r.electoralArea !== filterElectoralArea) return false;
       if (filterPollingStation && r.station !== filterPollingStation) return false;
       if (filterPosition && r.position !== filterPosition) return false;
+      if (filterDelegateType && r.delegateType !== filterDelegateType) return false;
       return true;
     });
   };
@@ -170,7 +173,7 @@ const saveRecords = (newRecords: RecordItem[]) => {
       return;
     }
 
-    const headers = ["ID", "Surname", "First Name", "Middle Name", "Phone", "Age", "Electoral Area", "Polling Station", "Station Code", "Position", "Status", "Issued Date", "Returned Date"];
+    const headers = ["ID", "Surname", "First Name", "Middle Name", "Phone", "Age", "Electoral Area", "Polling Station", "Station Code", "Position", "Delegate Type", "Status", "Issued Date", "Returned Date"];
     const rows = dataToExport.map((record) => [
       record.id,
       record.surname || "",
@@ -182,6 +185,7 @@ const saveRecords = (newRecords: RecordItem[]) => {
       record.station || "",
       record.stationCode || "",
       record.position || "",
+      record.delegateType || "",
       record.status || "",
       record.issuedDate ? new Date(record.issuedDate).toLocaleDateString() : "",
       record.returnedDate ? new Date(record.returnedDate).toLocaleDateString() : "",
@@ -204,7 +208,7 @@ const saveRecords = (newRecords: RecordItem[]) => {
   };
 
   const handleSubmit = async () => {
-    if (!form.surname || !form.firstname || !form.electoralArea || !form.station || !form.position) {
+    if (!form.surname || !form.firstname || !form.electoralArea || !form.station || !form.position || !form.delegateType) {
       alert("Please fill in all required fields");
       return;
     }
@@ -230,6 +234,7 @@ const saveRecords = (newRecords: RecordItem[]) => {
           station: form.station,
           stationCode: form.stationCode || "",
           position: form.position,
+          delegateType: form.delegateType,
           status: "ISSUED",
           action: "ISSUE"
         }),
@@ -266,7 +271,8 @@ const saveRecords = (newRecords: RecordItem[]) => {
     r.firstname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     r.electoralArea?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     r.station?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.position?.toLowerCase().includes(searchTerm.toLowerCase())
+    r.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.delegateType?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const stats = {
@@ -406,8 +412,18 @@ const saveRecords = (newRecords: RecordItem[]) => {
                 </select>
               </div>
 
-              <button className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg"
-                onClick={handleSubmit}>Issue Form</button>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Delegate Type *</label>
+                <select value={form.delegateType || ""}
+                  required
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none bg-white"
+                  onChange={(e) => setForm({ ...form, delegateType: e.target.value })}>
+                  <option value="">Select Delegate Type</option>
+                  {delegateTypes.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
 
@@ -427,7 +443,7 @@ const saveRecords = (newRecords: RecordItem[]) => {
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <h3 className="font-semibold">{record.surname} {record.firstname}</h3>
-                            <p className="text-sm text-slate-500">{record.position}</p>
+                            <p className="text-sm text-slate-500">{record.position} • {record.delegateType}</p>
                           </div>
                           <span className="px-3 py-1 rounded-full text-xs bg-slate-200">ISSUED</span>
                         </div>
@@ -467,7 +483,7 @@ const saveRecords = (newRecords: RecordItem[]) => {
 
               <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <h3 className="font-semibold text-slate-900 mb-3">Filter by Criteria</h3>
-                <div className="grid gap-3 md:grid-cols-3 mb-3">
+                <div className="grid gap-3 md:grid-cols-4 mb-3">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Electoral Area</label>
                     <select value={filterElectoralArea} onChange={handleFilterAreaChange}
@@ -499,8 +515,18 @@ const saveRecords = (newRecords: RecordItem[]) => {
                       ))}
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Delegate Type</label>
+                    <select value={filterDelegateType} onChange={(e) => setFilterDelegateType(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none bg-white text-sm">
+                      <option value="">All Types</option>
+                      {delegateTypes.map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                {(filterElectoralArea || filterPollingStation || filterPosition) && (
+                {(filterElectoralArea || filterPollingStation || filterPosition || filterDelegateType) && (
                   <div className="text-sm font-semibold text-blue-900">
                     Total individuals with selected criteria: <span className="text-lg text-blue-700">{analyticsCount}</span>
                   </div>
@@ -524,7 +550,7 @@ const saveRecords = (newRecords: RecordItem[]) => {
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <h3 className="font-semibold">{record.surname} {record.firstname}</h3>
-                            <p className="text-sm text-slate-500">{record.position}</p>
+                            <p className="text-sm text-slate-500">{record.position} • {record.delegateType}</p>
                           </div>
                           <span className={`px-3 py-1 rounded-full text-xs ${record.status === "ISSUED" ? "bg-slate-200" : "bg-red-100"}`}>{record.status}</span>
                         </div>

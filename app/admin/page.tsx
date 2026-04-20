@@ -300,7 +300,7 @@ export default function AdminPage() {
                       />
                       <div>
                         <p className="font-semibold text-slate-900">{record.surname || record.firstname || "Unnamed"}</p>
-                        <p className="text-sm text-slate-500">{record.electoralArea || "No area"} • {record.station || "No station"}</p>
+                        <p className="text-sm text-slate-500">{record.electoralArea || "No area"} • {record.station || "No station"} • {record.position || "No position"} • {record.delegateType || "No type"}</p>
                       </div>
                     </label>
                   ))
