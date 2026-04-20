@@ -208,8 +208,8 @@ const saveRecords = (newRecords: RecordItem[]) => {
   };
 
   const handleSubmit = async () => {
-    if (!form.surname || !form.firstname || !form.electoralArea || !form.station || !form.position || !form.delegateType) {
-      alert("Please fill in all required fields");
+    if (!form.surname || !form.firstname || !form.electoralArea || !form.station || !form.position || !form.delegateType || !form.phone || form.phone.length !== 10 || !/^\d{10}$/.test(form.phone)) {
+      alert("Please fill in all required fields. Phone number must be exactly 10 digits.");
       return;
     }
 
@@ -362,8 +362,11 @@ const saveRecords = (newRecords: RecordItem[]) => {
 
               <div className="grid grid-cols-2 gap-4 mb-5">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone Number</label>
-                  <input value={form.phone || ""} placeholder="Mobile number"
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone Number *</label>
+                  <input type="tel" value={form.phone || ""} placeholder="Mobile number (10 digits)"
+                    required
+                    pattern="[0-9]{10}"
+                    title="Phone number must be exactly 10 digits"
                     className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-800 outline-none"
                     onChange={(e) => setForm({ ...form, phone: e.target.value })} />
                 </div>
