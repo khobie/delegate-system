@@ -424,6 +424,13 @@ const saveRecords = (newRecords: RecordItem[]) => {
                   ))}
                 </select>
               </div>
+
+              <button
+                onClick={handleSubmit}
+                className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg"
+              >
+                Issue Form
+              </button>
             </div>
           )}
 
