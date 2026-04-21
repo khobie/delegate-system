@@ -32,7 +32,7 @@ const NAV_ITEMS: NavItem[] = [
 const POSITIONS = ["CHAIRMAN", "SECRETARY", "ORGANIZER", "WOMEN ORGANIZER", "YOUTH ORGANIZER", "COMMUNICATION OFFICER", "ELECTORAL AFFAIRS OFFICER"];
 const DELEGATE_TYPES = ["Old Delegate", "New Delegate"];
 
-function SingleVettingCard({ record, onVerify, onReject, verificationResult, returnedForm, setReturnedForm, rejectionReason, setRejectionReason, allRecords }: {
+function SingleVettingCard({ record, onVerify, onReject, verificationResult, returnedForm, setReturnedForm, rejectionReason, setRejectionReason, allRecords, onEdit }: {
   record: Record<string, any>;
   onVerify: () => void;
   onReject: () => void;
@@ -42,6 +42,7 @@ function SingleVettingCard({ record, onVerify, onReject, verificationResult, ret
   rejectionReason: string;
   setRejectionReason: (r: string) => void;
   allRecords?: Record<string, any>[];
+  onEdit?: () => void;
 }) {
   const hasConflict = record.phone && allRecords ? allRecords.filter(r => r.phone === record.phone && r.id !== record.id).length > 0 : false;
   
@@ -66,6 +67,11 @@ function SingleVettingCard({ record, onVerify, onReject, verificationResult, ret
           <div><span className="text-slate-500 text-sm">Issued:</span><p className="font-medium">{record.issuedDate ? new Date(record.issuedDate).toLocaleDateString() : "-"}</p></div>
         </div>
       </div>
+      {!verificationResult && (
+        <div className="mb-4">
+          <button onClick={onEdit} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">✏️ Edit Record</button>
+        </div>
+      )}
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
         <h3 className="font-bold text-lg mb-4">Verify Returned Form</h3>
         <div className="mb-4">
@@ -882,7 +888,7 @@ export default function AdminPage() {
                       <input type="tel" value={returnSearchPhone} onChange={(e) => setReturnSearchPhone(e.target.value)} placeholder="Enter 10-digit phone number" className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                       <button onClick={() => handleSearchReturn(returnSearchPhone)} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium">Search</button>
                     </div>
-                    {foundRecord && <SingleVettingCard record={foundRecord} onVerify={handleVerifyReturn} onReject={handleRejectWithReason} verificationResult={verificationResult} returnedForm={returnedForm} setReturnedForm={setReturnedForm} rejectionReason={rejectionReason} setRejectionReason={setRejectionReason} allRecords={records} />}
+                     {foundRecord && <SingleVettingCard record={foundRecord} onVerify={handleVerifyReturn} onReject={handleRejectWithReason} verificationResult={verificationResult} returnedForm={returnedForm} setReturnedForm={setReturnedForm} rejectionReason={rejectionReason} setRejectionReason={setRejectionReason} allRecords={records} onEdit={() => handleEditRecord(foundRecord)} />}
                   </div>
                 )}
 
