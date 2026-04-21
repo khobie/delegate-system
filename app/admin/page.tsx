@@ -94,7 +94,7 @@ function SingleVettingCard({ record, onVerify, onReject, verificationResult, ret
   );
 }
 
-function BulkVettingTable({ records }: { records: Record<string, any>[] }) {
+function BulkVettingTable({ records, persistRecords }: { records: Record<string, any>[]; persistRecords: (r: Record<string, any>[]) => void }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const handleToggle = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -898,7 +898,7 @@ export default function AdminPage() {
                         {stationStations.map((s, i) => <option key={i} value={s.name}>{s.name} ({s.code})</option>)}
                       </select>
                     </div>
-                    <BulkVettingTable records={records.filter(r => (r.status === "ISSUED" || r.status === "RETURNED-MISMATCH") && (!selectedArea || r.electoralArea === selectedArea) && (!selectedStation || r.station === selectedStation))} />
+                     <BulkVettingTable records={records.filter(r => (r.status === "ISSUED" || r.status === "RETURNED-MISMATCH") && (!selectedArea || r.electoralArea === selectedArea) && (!selectedStation || r.station === selectedStation))} persistRecords={persistRecords} />
                   </div>
                 )}
 
