@@ -1,22 +1,28 @@
 "use client";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { electoralAreas } from "../data/electoralData";
 
 type Account = {
   id?: string;
   username: string;
   password: string;
-  role: string;
+  role: "admin" | "panel_member";
+  assignedAreas?: string[];
+  fullName?: string;
 };
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6xQ3q41bzRYMgNyvqCbCvzmosNM4Fc1COcUVvxy5VTRsJ4qpN_d0BNtF430Ki3DnT/exec";
 
 const DEFAULT_ACCOUNTS: Account[] = [
-  { username: "admin", password: "delegate123", role: "admin" },
+  { username: "admin", password: "delegate123", role: "admin", assignedAreas: [], fullName: "System Administrator" },
+  { username: "panel1", password: "panel123", role: "panel_member", assignedAreas: ["AHAFO YE TWIA AKWAMU", "KWAHU ATIBIE"], fullName: "John Smith" },
+  { username: "panel2", password: "panel123", role: "panel_member", assignedAreas: ["DAMPASE", "OTI AKWAMU"], fullName: "Jane Doe" },
 ];
 
 export default function Home() {
+  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [loginError, setLoginError] = useState("");
@@ -44,6 +50,12 @@ export default function Home() {
   const [rejectionReason, setRejectionReason] = useState("");
 
   useEffect(() => {
+    // Redirect panel members away from main issuance page
+    if (currentUser && currentUser.role === "panel_member") {
+      router.push("/admin");
+      return;
+    }
+
     const fetchRecords = async () => {
       try {
         const response = await fetch(SCRIPT_URL + "?action=GET_ALL");
@@ -68,36 +80,70 @@ export default function Home() {
         }
       }
     };
-    
+
     fetchRecords();
 
-    const savedAccounts = localStorage.getItem("delegateAccounts");
-    if (savedAccounts) {
+    // Migrate old delegateAccounts to panelMembers if needed
+    const oldAccounts = localStorage.getItem("delegateAccounts");
+    const savedAccounts = localStorage.getItem("panelMembers");
+
+    if (oldAccounts && !savedAccounts) {
+      try {
+        const parsed = JSON.parse(oldAccounts) as Account[];
+        // Migrate old admin account to new format with fullName
+        const migrated = parsed.map((acc: any) => ({
+          ...acc,
+          role: acc.role || "admin",
+          assignedAreas: acc.role === "admin" ? [] : acc.assignedAreas || [],
+          fullName: acc.username === "admin" ? "System Administrator" : acc.username,
+        }));
+        localStorage.setItem("panelMembers", JSON.stringify(migrated));
+        setAccounts(migrated);
+      } catch {
+        localStorage.setItem("panelMembers", JSON.stringify(DEFAULT_ACCOUNTS));
+        setAccounts(DEFAULT_ACCOUNTS);
+      }
+    } else if (savedAccounts) {
       try {
         const parsed = JSON.parse(savedAccounts) as Account[];
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setAccounts(parsed);
+          // Ensure default panel members exist (one-time seed)
+          const hasPanelMember = parsed.some(acc => acc.role === "panel_member");
+          if (!hasPanelMember) {
+            const defaultPanelMembers = DEFAULT_ACCOUNTS.filter(acc => acc.role === "panel_member");
+            const merged = [...parsed, ...defaultPanelMembers];
+            localStorage.setItem("panelMembers", JSON.stringify(merged));
+            setAccounts(merged);
+          } else {
+            setAccounts(parsed);
+          }
         }
       } catch {
+        localStorage.setItem("panelMembers", JSON.stringify(DEFAULT_ACCOUNTS));
         setAccounts(DEFAULT_ACCOUNTS);
-        localStorage.setItem("delegateAccounts", JSON.stringify(DEFAULT_ACCOUNTS));
       }
     } else {
-      localStorage.setItem("delegateAccounts", JSON.stringify(DEFAULT_ACCOUNTS));
+      localStorage.setItem("panelMembers", JSON.stringify(DEFAULT_ACCOUNTS));
+      setAccounts(DEFAULT_ACCOUNTS);
     }
 
     const loggedIn = localStorage.getItem("isLoggedIn");
     const savedUser = localStorage.getItem("currentUser");
     if (loggedIn === "true" && savedUser) {
       try {
-        setCurrentUser(JSON.parse(savedUser) as Account);
+        const user = JSON.parse(savedUser) as Account;
+        setCurrentUser(user);
         setIsLoggedIn(true);
+        // Redirect panel members away from main page
+        if (user.role === "panel_member") {
+          router.push("/admin");
+        }
       } catch {
         setIsLoggedIn(false);
         localStorage.removeItem("currentUser");
       }
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (currentUser && currentUser.role !== "admin" && activeTab !== "issue") {
@@ -126,6 +172,11 @@ const saveRecords = (newRecords: RecordItem[]) => {
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("currentUser", JSON.stringify(matchingAccount));
       setLoginError("");
+
+      // Redirect panel members to admin dashboard
+      if (matchingAccount.role === "panel_member") {
+        router.push("/admin");
+      }
       return;
     }
 
