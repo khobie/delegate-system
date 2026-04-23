@@ -84,6 +84,42 @@ const NAV_ITEMS = [
 
 // ==================== COMPONENTS ====================
 
+// Modern Detail Item component
+function DetailItem({ 
+  label, 
+  value, 
+  badge 
+}: { 
+  label: string; 
+  value: string; 
+  badge?: "success" | "error" | "default" 
+}) {
+  const badgeStyles = {
+    success: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    error: "bg-red-100 text-red-700 border-red-200",
+    default: "bg-slate-100 text-slate-700 border-slate-200"
+  };
+
+  return (
+    <div className="group">
+      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">
+        {label}
+      </span>
+      <div className="flex items-center gap-2">
+        {badge ? (
+          <span className={`px-2.5 py-1 rounded-lg text-sm font-semibold border ${badgeStyles[badge]}`}>
+            {value}
+          </span>
+        ) : (
+          <p className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+            {value}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Single Vetting Card with full decision tracking
 function SingleVettingCard({
   record,
@@ -127,44 +163,39 @@ function SingleVettingCard({
         </div>
       )}
 
-      {/* Original Application Details */}
-      <div className="bg-slate-50 rounded-xl p-4 mb-6">
-        <h3 className="font-bold text-lg mb-2">Original Application</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <span className="text-slate-500 text-sm">Name:</span>
-            <p className="font-medium">{record.surname} {record.firstname}</p>
-          </div>
-          <div>
-            <span className="text-slate-500 text-sm">Phone:</span>
-            <p className="font-medium">{record.phone}</p>
-          </div>
-          <div>
-            <span className="text-slate-500 text-sm">Position:</span>
-            <p className="font-medium">{record.position}</p>
-          </div>
-          <div>
-            <span className="text-slate-500 text-sm">Status:</span>
-            <span className={`px-2 py-1 rounded text-xs font-medium ${record.status === "RETURNED" ? "bg-green-100 text-green-700" : record.status === "REJECTED" ? "bg-red-100 text-red-700" : "bg-slate-200"}`}>{record.status}</span>
-          </div>
-          <div>
-            <span className="text-slate-500 text-sm">Electoral Area:</span>
-            <p className="font-medium">{record.electoralArea}</p>
-          </div>
-          <div>
-            <span className="text-slate-500 text-sm">Station:</span>
-            <p className="font-medium">{record.station}</p>
-          </div>
-          <div>
-            <span className="text-slate-500 text-sm">Type:</span>
-            <p className="font-medium">{record.delegateType}</p>
-          </div>
-          <div>
-            <span className="text-slate-500 text-sm">Issued:</span>
-            <p className="font-medium">{record.issuedDate ? new Date(record.issuedDate).toLocaleDateString() : "-"}</p>
-          </div>
-        </div>
-      </div>
+       {/* Original Application Details */}
+       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-200/80 p-6 mb-8 shadow-sm">
+         {/* Subtle background decoration */}
+         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100/20 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+         <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-100/15 rounded-full blur-xl translate-y-1/2 -translate-x-1/2"></div>
+         
+         <div className="relative flex items-center gap-3 mb-5">
+           <div className="p-2 bg-white rounded-lg shadow-sm border border-slate-200">
+             <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+             </svg>
+           </div>
+           <h3 className="text-lg font-bold text-slate-900">Application Details</h3>
+         </div>
+         
+         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+           <DetailItem label="Full Name" value={`${record.surname} ${record.firstname}`} />
+           <DetailItem label="Phone Number" value={record.phone} />
+           <DetailItem label="Position" value={record.position} />
+           <DetailItem 
+             label="Status" 
+             value={record.status}
+             badge={record.status === "RETURNED" ? "success" : record.status === "REJECTED" ? "error" : "default"}
+           />
+           <DetailItem label="Electoral Area" value={record.electoralArea} />
+           <DetailItem label="Polling Station" value={record.station} />
+           <DetailItem label="Delegate Type" value={record.delegateType} />
+           <DetailItem 
+             label="Issued Date" 
+             value={record.issuedDate ? new Date(record.issuedDate).toLocaleDateString() : "N/A"} 
+           />
+         </div>
+       </div>
 
       {/* Vetting Questions Section */}
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
@@ -1965,44 +1996,109 @@ export default function AdminPage() {
               );
             })()}
 
-            {/* Vetting Modal */}
+            {/* Modern Vetting Modal */}
             {selectedRecord && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                {/* Backdrop */}
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+                {/* Animated Backdrop */}
                 <div
-                  className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                  className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-blue-950/70 to-slate-900/90 backdrop-blur-xl modal-backdrop"
                   onClick={() => setSelectedRecord(null)}
                 />
                 
-                {/* Modal Content */}
-                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                  {/* Header */}
-                  <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between z-10">
-                    <h2 className="text-xl font-bold text-slate-900">
-                      Vetting: {selectedRecord.surname} {selectedRecord.firstname}
-                    </h2>
-                    <button
-                      onClick={() => setSelectedRecord(null)}
-                      className="text-slate-500 hover:text-slate-700 text-2xl leading-none"
-                      aria-label="Close modal"
-                    >
-                      ×
-                    </button>
+                {/* Modal Container */}
+                <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col modal-content">
+                  {/* Modern Gradient Header */}
+                  <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-t-2xl p-6 text-white shadow-2xl relative overflow-hidden">
+                    {/* Decorative elements */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full blur-xl translate-y-1/2 -translate-x-1/2"></div>
+                    
+                    <div className="relative flex items-center justify-between">
+                      <div className="flex items-center gap-5">
+                        {/* Icon with subtle glow */}
+                        <div className="relative p-4 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 shadow-lg">
+                          <div className="absolute inset-0 bg-white/20 rounded-2xl blur-lg"></div>
+                          <span className="text-3xl relative z-10">🔍</span>
+                        </div>
+                        <div>
+                          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight">
+                            Vetting Assessment
+                          </h2>
+                          <p className="text-blue-100 text-sm sm:text-base mt-2 flex items-center gap-2">
+                            <span className="font-semibold">{selectedRecord.surname} {selectedRecord.firstname}</span>
+                            <span className="w-1 h-1 bg-blue-300 rounded-full"></span>
+                            <span>{selectedRecord.position}</span>
+                          </p>
+                          {/* Location badges */}
+                          <div className="flex flex-wrap items-center gap-2 mt-3">
+                            <div className="px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 text-xs font-medium flex items-center gap-1.5">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              {selectedRecord.electoralArea}
+                            </div>
+                            <div className="px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 text-xs font-medium flex items-center gap-1.5">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                              </svg>
+                              {selectedRecord.station}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Close button */}
+                      <button
+                        onClick={() => setSelectedRecord(null)}
+                        className="group p-3 hover:bg-white/10 rounded-xl transition-all duration-200 border border-transparent hover:border-white/20 hover:rotate-90 backdrop-blur-sm"
+                        aria-label="Close modal"
+                      >
+                        <svg className="w-6 h-6 text-white/90 group-hover:text-white transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Body */}
-                  <div className="p-6">
-                    <SingleVettingCard
-                      record={selectedRecord}
-                      onDecision={handleVettingDecision}
-                      currentDecision={selectedRecord.currentDecision}
-                      overallComment={overallComment}
-                      setOverallComment={setOverallComment}
-                      vettingQuestions={vettingQuestions}
-                      setVettingQuestions={setVettingQuestions}
-                      panelMember={currentUser!}
-                      decisionHistory={selectedRecord.decisions || []}
-                    />
+                  {/* Scrollable Content Area */}
+                  <div className="flex-1 bg-gradient-to-b from-slate-50 to-white rounded-b-2xl shadow-2xl overflow-y-auto max-h-[60vh] modal-scrollbar">
+                    <div className="p-6 sm:p-8">
+                      <SingleVettingCard
+                        record={selectedRecord}
+                        onDecision={handleVettingDecision}
+                        currentDecision={selectedRecord.currentDecision}
+                        overallComment={overallComment}
+                        setOverallComment={setOverallComment}
+                        vettingQuestions={vettingQuestions}
+                        setVettingQuestions={setVettingQuestions}
+                        panelMember={currentUser!}
+                        decisionHistory={selectedRecord.decisions || []}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Enhanced Footer */}
+                  <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-4 pb-3 text-xs text-slate-500">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                        <span className="text-sm">💡</span>
+                        <span className="font-medium text-blue-700">Tip</span>
+                      </div>
+                      <span className="flex items-center gap-1.5">
+                        Press 
+                        <kbd className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 rounded font-mono text-xs font-semibold text-slate-700 transition-colors border border-slate-300">Esc</kbd> 
+                        to close
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-50 rounded-lg border border-green-100">
+                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.4)]"></span>
+                        <span className="font-medium text-green-700">Auto-saved</span>
+                      </div>
+                      <span className="text-slate-400">•</span>
+                      <span>{selectedRecord.surname} {selectedRecord.firstname}</span>
+                    </div>
                   </div>
                 </div>
               </div>
