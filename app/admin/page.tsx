@@ -6,14 +6,17 @@ import { electoralAreas } from "../../data/electoralData";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6xQ3q41bzRYMgNyvqCbCvzmosNM4Fc1COcUVvxy5VTRsJ4qpN_d0BNtF430Ki3DnT/exec";
 
 // ==================== TYPES ====================
-type PanelMember = {
+type User = {
   id: string;
   username: string;
   password: string;
-  role: "admin" | "panel_member";
-  assignedAreas: string[]; // Electoral areas assigned to this panel member
+  role: "admin" | "issuer" | "panel_member";
+  assignedAreas: string[]; // Electoral areas assigned to panel members (empty for admin/issuer)
   fullName: string;
 };
+
+// Keep PanelMember as alias for backward compatibility
+type PanelMember = User;
 
 type VettingDecision = {
   id: string;
@@ -61,8 +64,9 @@ type Account = {
 };
 
 // ==================== DEFAULT DATA ====================
-const DEFAULT_ACCOUNTS: PanelMember[] = [
+const DEFAULT_ACCOUNTS: User[] = [
   { id: "admin", username: "admin", password: "delegate123", role: "admin", assignedAreas: [], fullName: "System Administrator" },
+  { id: "issuer1", username: "issuer", password: "issuer123", role: "issuer", assignedAreas: [], fullName: "Data Entry Officer" },
   { id: "panel1", username: "panel1", password: "panel123", role: "panel_member", assignedAreas: ["AHAFO YE TWIA AKWAMU", "KWAHU ATIBIE"], fullName: "John Smith" },
   { id: "panel2", username: "panel2", password: "panel123", role: "panel_member", assignedAreas: ["DAMPASE", "OTI AKWAMU"], fullName: "Jane Doe" },
 ];
@@ -72,10 +76,10 @@ const DELEGATE_TYPES = ["Old Delegate", "New Delegate"];
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: "📊", roles: ["admin"] },
-  { id: "issue", label: "Issue Form", icon: "📝", roles: ["admin"] },
+  { id: "issue", label: "Issue Form", icon: "📝", roles: ["admin", "issuer"] },
   { id: "vetting", label: "Vetting Workspace", icon: "✓", roles: ["admin", "panel_member"] },
-  { id: "panel", label: "Panel Members", icon: "👥", roles: ["admin"] },
-  { id: "reports", label: "Reports", icon: "📋", roles: ["admin"] },
+  { id: "accounts", label: "Accounts", icon: "👤", roles: ["admin"] },
+  { id: "reports", label: "Reports", icon: "📋", roles: ["admin", "issuer", "panel_member"] },
 ];
 
 // ==================== COMPONENTS ====================
@@ -325,132 +329,16 @@ function SingleVettingCard({
   );
 }
 
-// Bulk Vetting Table
-function BulkVettingTable({ records, persistRecords }: { records: DelegateRecord[]; persistRecords: (r: DelegateRecord[]) => void }) {
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [bulkDecision, setBulkDecision] = useState<"APPROVED" | "REJECTED" | "PENDING">("APPROVED");
-  const [bulkComment, setBulkComment] = useState("");
 
-  const handleToggle = (id: string) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
-  const handleBulkDecision = () => {
-    if (selectedIds.length === 0) return;
-
-    const now = new Date().toISOString();
-    const updated = records.map(r => {
-      if (!selectedIds.includes(String(r.id))) return r;
-
-        const newDecision: VettingDecision = {
-          id: `dec-${Date.now()}-${Math.random()}`,
-          panelMemberId: "admin",
-          panelMemberName: "Administrator",
-          decision: bulkDecision,
-          timestamp: now,
-          comments: bulkComment,
-          vettingQuestions: {
-            aspirantPresent: true,
-            partyMembershipCardSighted: true,
-            nameMatchesPartyRegister: true,
-            votersIdOrGhanaCardSighted: true,
-            passportPhotoMatches: true,
-            membershipConfirmedAtStation: true,
-          },
-      };
-
-      return {
-        ...r,
-        decisions: [...(r.decisions || []), newDecision],
-        currentDecision: bulkDecision,
-        status: bulkDecision === "APPROVED" ? "RETURNED" : bulkDecision === "REJECTED" ? "REJECTED" : "PENDING_VERIFICATION",
-        overallComment: bulkComment,
-      };
-    });
-
-    persistRecords(updated);
-    setSelectedIds([]);
-    setBulkComment("");
-  };
-
-  if (records.length === 0) {
-    return <div className="text-center py-8 text-slate-500">No pending records found</div>;
-  }
-
-  return (
-    <div>
-      <div className="flex flex-wrap gap-2 mb-4">
-        <select
-          value={bulkDecision}
-          onChange={(e) => setBulkDecision(e.target.value as any)}
-          className="px-4 py-2 border border-slate-300 rounded-lg bg-white"
-        >
-          <option value="APPROVED">Approve</option>
-          <option value="REJECTED">Reject</option>
-          <option value="PENDING">Mark Pending</option>
-        </select>
-        <input
-          type="text"
-          value={bulkComment}
-          onChange={(e) => setBulkComment(e.target.value)}
-          placeholder="Bulk comment (optional)"
-          className="px-4 py-2 border border-slate-300 rounded-lg flex-1 min-w-[200px]"
-        />
-        <button
-          onClick={handleBulkDecision}
-          disabled={selectedIds.length === 0}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg disabled:opacity-50 font-medium"
-        >
-          Apply to {selectedIds.length} selected
-        </button>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-slate-100">
-            <tr>
-              <th className="text-left py-3 px-2"><input type="checkbox" onChange={(e) => e.target.checked ? setSelectedIds(records.map(r => String(r.id))) : setSelectedIds([])} /></th>
-              <th className="text-left py-3 px-2">Name</th>
-              <th className="text-left py-3 px-2">Phone</th>
-              <th className="text-left py-3 px-2">Position</th>
-              <th className="text-left py-3 px-2">Station</th>
-              <th className="text-left py-3 px-2">Area</th>
-              <th className="text-left py-3 px-2">Status</th>
-              <th className="text-left py-3 px-2">Decision</th>
-            </tr>
-          </thead>
-          <tbody>
-            {records.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100">
-                <td className="py-3 px-2"><input type="checkbox" checked={selectedIds.includes(String(r.id))} onChange={() => handleToggle(String(r.id))} /></td>
-                <td className="py-3 px-2 font-medium">{r.surname} {r.firstname}</td>
-                <td className="py-3 px-2">{r.phone}</td>
-                <td className="py-3 px-2">{r.position}</td>
-                <td className="py-3 px-2">{r.station}</td>
-                <td className="py-3 px-2">{r.electoralArea}</td>
-                <td className="py-3 px-2"><span className="px-2 py-1 bg-slate-200 rounded text-xs">{r.status}</span></td>
-                <td className="py-3 px-2">
-                  <span className={`px-2 py-1 rounded text-xs font-bold ${r.currentDecision === "APPROVED" ? "bg-green-100 text-green-700" : r.currentDecision === "REJECTED" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
-                    {r.currentDecision}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
 
 // ==================== MAIN PAGE ====================
 export default function AdminPage() {
-  const [panelMembers, setPanelMembers] = useState<PanelMember[]>([]);
+  const [panelMembers, setPanelMembers] = useState<User[]>([]);
   const [delegateRecords, setDelegateRecords] = useState<DelegateRecord[]>([]);
   const [message, setMessage] = useState("");
 
   // Authentication
-  const [currentUser, setCurrentUser] = useState<PanelMember | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
@@ -459,10 +347,14 @@ export default function AdminPage() {
   const [activeNav, setActiveNav] = useState("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Force vetting tab for panel members
+  // Force appropriate default tabs based on role
   useEffect(() => {
     if (currentUser?.role === "panel_member" && activeNav !== "vetting") {
       setActiveNav("vetting");
+    } else if (currentUser?.role === "issuer" && activeNav !== "issue") {
+      setActiveNav("issue");
+    } else if (currentUser?.role === "admin" && activeNav !== "dashboard") {
+      setActiveNav("dashboard");
     }
   }, [currentUser]);
 
@@ -489,35 +381,33 @@ export default function AdminPage() {
     membershipConfirmedAtStation: false,
   });
 
-  // Panel Member Form
-  const [panelForm, setPanelForm] = useState({
+  // Account Form
+  const [accountForm, setAccountForm] = useState({
     username: "",
     password: "",
     fullName: "",
+    role: "issuer" as "admin" | "issuer" | "panel_member",
     assignedAreas: [] as string[],
   });
 
-  // Report Filters
-  const [reportFilterStatus, setReportFilterStatus] = useState("");
-  const [reportFilterArea, setReportFilterArea] = useState("");
-  const [reportFilterStation, setReportFilterStation] = useState("");
-  const [reportFilterPosition, setReportFilterPosition] = useState("");
-  const [reportFilterDelegateType, setReportFilterDelegateType] = useState("");
-  const [reportView, setReportView] = useState<"summary" | "contests" | "detailed">("summary");
-  const [expandedAreas, setExpandedAreas] = useState<string[]>([]);
-  const [expandedStations, setExpandedStations] = useState<string[]>([]);
+   // Report Filters
+   const [reportFilterStatus, setReportFilterStatus] = useState("");
+   const [reportFilterArea, setReportFilterArea] = useState("");
+   const [reportFilterStation, setReportFilterStation] = useState("");
+   const [reportFilterPosition, setReportFilterPosition] = useState("");
+   const [reportFilterDelegateType, setReportFilterDelegateType] = useState("");
+   const [reportView, setReportView] = useState<"summary" | "contests" | "detailed">("summary");
+   
 
-  // Edit State
-  const [editingRecord, setEditingRecord] = useState<DelegateRecord | null>(null);
-  const [editForm, setEditForm] = useState<Record<string, any>>({});
-  const [editStations, setEditStations] = useState<{name: string; code: string}[]>([]);
+
+
 
   // Load data from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("panelMembers");
     if (saved) {
       try {
-        const parsed = JSON.parse(saved) as PanelMember[];
+        const parsed = JSON.parse(saved) as User[];
         if (Array.isArray(parsed) && parsed.length > 0) {
           // Ensure default panel members exist (one-time seed)
           const hasPanelMember = parsed.some(acc => acc.role === "panel_member");
@@ -588,11 +478,176 @@ export default function AdminPage() {
     window.location.href = "/";
   };
 
-  // Persist records
-  const persistRecords = (newRecords: DelegateRecord[]) => {
-    setDelegateRecords(newRecords);
-    localStorage.setItem("delegateRecords", JSON.stringify(newRecords));
-  };
+   // Persist records
+   const persistRecords = (newRecords: DelegateRecord[]) => {
+     setDelegateRecords(newRecords);
+     localStorage.setItem("delegateRecords", JSON.stringify(newRecords));
+   };
+
+    // Export functions
+    const handleExportCSV = () => {
+      let filtered = delegateRecords;
+
+      if (currentUser?.role === "panel_member" && currentUser.assignedAreas.length > 0) {
+        filtered = filtered.filter(r => currentUser.assignedAreas.includes(r.electoralArea));
+      }
+
+      if (reportFilterArea) filtered = filtered.filter(r => r.electoralArea === reportFilterArea);
+      if (reportFilterStation) filtered = filtered.filter(r => r.stationCode === reportFilterStation);
+      if (reportFilterPosition) filtered = filtered.filter(r => r.position === reportFilterPosition);
+      if (reportFilterDelegateType) filtered = filtered.filter(r => r.delegateType === reportFilterDelegateType);
+      if (reportFilterStatus) {
+        if (reportFilterStatus === "ISSUED") {
+          filtered = filtered.filter(r => r.status === "ISSUED");
+        } else if (reportFilterStatus === "RETURNED") {
+          filtered = filtered.filter(r => r.status === "RETURNED");
+        } else if (reportFilterStatus === "VERIFIED") {
+          filtered = filtered.filter(r => r.status === "RETURNED" && r.currentDecision === "APPROVED");
+        } else if (reportFilterStatus === "REJECTED") {
+          filtered = filtered.filter(r => r.status === "REJECTED");
+        }
+      }
+
+      const filteredRecords = filtered;
+
+      if (filteredRecords.length === 0) {
+        setMessage("No data to export");
+        return;
+      }
+
+     // Create CSV content
+     const headers = [
+       'Electoral Area',
+       'Polling Station',
+       'Position',
+       'Delegate Type',
+       'Status',
+       'Decision',
+       'Surname',
+       'First Name',
+       'Middle Name',
+       'Phone',
+       'Age',
+       'Issued Date',
+       'Returned Date'
+     ];
+
+     const csvRows = [];
+     csvRows.push(headers.join(','));
+
+     filteredRecords.forEach(record => {
+       const row = [
+         `"${record.electoralArea || ''}"`,
+         `"${record.station || ''}"`,
+         `"${record.position || ''}"`,
+         `"${record.delegateType || ''}"`,
+         `"${record.status || ''}"`,
+         `"${record.currentDecision || ''}"`,
+         `"${record.surname || ''}"`,
+         `"${record.firstname || ''}"`,
+         `"${record.middlename || ''}"`,
+         `"${record.phone || ''}"`,
+         `"${record.age || ''}"`,
+         `"${record.issuedDate || ''}"`,
+         `"${record.returnedDate || ''}"`
+       ];
+       csvRows.push(row.join(','));
+     });
+
+     const csvContent = csvRows.join('\n');
+     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+     const url = URL.createObjectURL(blob);
+     const link = document.createElement('a');
+     link.setAttribute('href', url);
+     link.setAttribute('download', `Final_Election_Report_${new Date().toISOString().slice(0,10)}.csv`);
+     link.style.visibility = 'hidden';
+     document.body.appendChild(link);
+     link.click();
+     document.body.removeChild(link);
+   };
+
+    const handleExportExcel = () => {
+      let filtered = delegateRecords;
+
+      if (currentUser?.role === "panel_member" && currentUser.assignedAreas.length > 0) {
+        filtered = filtered.filter(r => currentUser.assignedAreas.includes(r.electoralArea));
+      }
+
+      if (reportFilterArea) filtered = filtered.filter(r => r.electoralArea === reportFilterArea);
+      if (reportFilterStation) filtered = filtered.filter(r => r.stationCode === reportFilterStation);
+      if (reportFilterPosition) filtered = filtered.filter(r => r.position === reportFilterPosition);
+      if (reportFilterDelegateType) filtered = filtered.filter(r => r.delegateType === reportFilterDelegateType);
+      if (reportFilterStatus) {
+        if (reportFilterStatus === "ISSUED") {
+          filtered = filtered.filter(r => r.status === "ISSUED");
+        } else if (reportFilterStatus === "RETURNED") {
+          filtered = filtered.filter(r => r.status === "RETURNED");
+        } else if (reportFilterStatus === "VERIFIED") {
+          filtered = filtered.filter(r => r.status === "RETURNED" && r.currentDecision === "APPROVED");
+        } else if (reportFilterStatus === "REJECTED") {
+          filtered = filtered.filter(r => r.status === "REJECTED");
+        }
+      }
+
+      const filteredRecords = filtered;
+
+      if (filteredRecords.length === 0) {
+        setMessage("No data to export");
+        return;
+      }
+
+     // Create Excel-compatible CSV (UTF-8 with BOM)
+     const headers = [
+       'Electoral Area',
+       'Polling Station',
+       'Position',
+       'Delegate Type',
+       'Status',
+       'Decision',
+       'Surname',
+       'First Name',
+       'Middle Name',
+       'Phone',
+       'Age',
+       'Issued Date',
+       'Returned Date'
+     ];
+
+     const csvRows = [];
+     csvRows.push(headers.join(','));
+
+     filteredRecords.forEach(record => {
+       const row = [
+         `"${record.electoralArea || ''}"`,
+         `"${record.station || ''}"`,
+         `"${record.position || ''}"`,
+         `"${record.delegateType || ''}"`,
+         `"${record.status || ''}"`,
+         `"${record.currentDecision || ''}"`,
+         `"${record.surname || ''}"`,
+         `"${record.firstname || ''}"`,
+         `"${record.middlename || ''}"`,
+         `"${record.phone || ''}"`,
+         `"${record.age || ''}"`,
+         `"${record.issuedDate || ''}"`,
+         `"${record.returnedDate || ''}"`
+       ];
+       csvRows.push(row.join(','));
+     });
+
+     const csvContent = '\uFEFF' + csvRows.join('\r\n'); // Add UTF-8 BOM for Excel
+     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+     const url = URL.createObjectURL(blob);
+     const link = document.createElement('a');
+     link.setAttribute('href', url);
+     link.setAttribute('download', `Final_Election_Report_${new Date().toISOString().slice(0,10)}.xls`);
+     link.style.visibility = 'hidden';
+     document.body.appendChild(link);
+     link.click();
+     document.body.removeChild(link);
+   };
+
+
 
   // Stats computation
   const getStats = () => {
@@ -622,9 +677,10 @@ export default function AdminPage() {
   const getFilteredRecords = (areaFilter?: string, stationFilter?: string) => {
     let filtered = delegateRecords;
 
-    if (currentUser?.role === "panel_member" && currentUser.assignedAreas.length > 0) {
-      filtered = filtered.filter(r => currentUser.assignedAreas.includes(r.electoralArea));
-    }
+                if (currentUser?.role === "panel_member" && currentUser.assignedAreas.length > 0) {
+                  filtered = filtered.filter(r => currentUser.assignedAreas.includes(r.electoralArea));
+                }
+                // Issuers can only see records they issued (simplified - showing all for now, but can be enhanced)
 
     if (areaFilter) {
       filtered = filtered.filter(r => r.electoralArea === areaFilter);
@@ -682,14 +738,14 @@ export default function AdminPage() {
       return;
     }
 
-    const newRecord: DelegateRecord = {
-      id: Date.now().toString(),
-      ...issueForm,
-      decisions: [],
-      currentDecision: "PENDING",
-      status: "ISSUED",
-      issuedDate: new Date().toISOString(),
-    };
+     const newRecord = {
+       id: Date.now().toString(),
+       ...(issueForm as Omit<DelegateRecord, 'id' | 'decisions' | 'currentDecision' | 'status' | 'issuedDate'>),
+       decisions: [],
+       currentDecision: "PENDING",
+       status: "ISSUED",
+       issuedDate: new Date().toISOString(),
+     } as DelegateRecord;
 
     persistRecords([newRecord, ...delegateRecords]);
     setIssueForm({});
@@ -712,75 +768,95 @@ export default function AdminPage() {
       vettingQuestions,
     };
 
-    const updatedRecords = delegateRecords.map(r => {
-      if (r.id === selectedRecord.id) {
-        return {
-          ...r,
-          decisions: [...(r.decisions || []), newDecision],
-          currentDecision: decision,
-          status: decision === "APPROVED" ? "RETURNED" : decision === "REJECTED" ? "REJECTED" : "PENDING_VERIFICATION",
-          overallComment: overallComment,
-        };
-      }
-      return r;
-    });
+     const updatedRecords = delegateRecords.map(r => {
+       if (r.id === selectedRecord.id) {
+         return {
+           ...r,
+           decisions: [...(r.decisions || []), newDecision],
+           currentDecision: decision,
+           status: (decision === "APPROVED" ? "RETURNED" : decision === "REJECTED" ? "REJECTED" : "PENDING_VERIFICATION") as "RETURNED" | "REJECTED" | "PENDING_VERIFICATION",
+           overallComment: overallComment,
+         };
+       }
+       return r;
+     });
 
-    persistRecords(updatedRecords);
-    setSelectedRecord({
-      ...selectedRecord,
-      decisions: [...(selectedRecord.decisions || []), newDecision],
-      currentDecision: decision,
-      status: decision === "APPROVED" ? "RETURNED" : decision === "REJECTED" ? "REJECTED" : "PENDING_VERIFICATION",
-      overallComment,
-    });
+     persistRecords(updatedRecords);
+     setSelectedRecord({
+       ...selectedRecord,
+       decisions: [...(selectedRecord.decisions || []), newDecision],
+       currentDecision: decision,
+       status: (decision === "APPROVED" ? "RETURNED" : decision === "REJECTED" ? "REJECTED" : "PENDING_VERIFICATION") as "RETURNED" | "REJECTED" | "PENDING_VERIFICATION",
+       overallComment,
+     });
 
     setMessage(`Decision recorded: ${decision}`);
   };
 
-  // Panel Member Management
-  const addPanelMember = () => {
-    if (!panelForm.username || !panelForm.password || !panelForm.fullName) {
+  // Account Management
+  const addAccount = () => {
+    if (!accountForm.username || !accountForm.password || !accountForm.fullName) {
       setMessage("Please fill in all required fields.");
       return;
     }
 
-    const exists = panelMembers.find(m => m.username === panelForm.username);
+    // For panel members, assigned areas are required
+    if (accountForm.role === "panel_member" && accountForm.assignedAreas.length === 0) {
+      setMessage("Please assign at least one electoral area for panel members.");
+      return;
+    }
+
+    const exists = panelMembers.find(m => m.username === accountForm.username);
     if (exists) {
       setMessage("Username already exists.");
       return;
     }
 
-    const newMember: PanelMember = {
-      id: `panel-${Date.now()}`,
-      username: panelForm.username,
-      password: panelForm.password,
-      role: "panel_member",
-      assignedAreas: panelForm.assignedAreas,
-      fullName: panelForm.fullName,
+    const newAccount: User = {
+      id: `${accountForm.role}-${Date.now()}`,
+      username: accountForm.username,
+      password: accountForm.password,
+      role: accountForm.role,
+      assignedAreas: accountForm.role === "panel_member" ? accountForm.assignedAreas : [],
+      fullName: accountForm.fullName,
     };
 
-    const updated = [...panelMembers, newMember];
+    const updated = [...panelMembers, newAccount];
     setPanelMembers(updated);
     localStorage.setItem("panelMembers", JSON.stringify(updated));
-    setPanelForm({ username: "", password: "", fullName: "", assignedAreas: [] });
-    setMessage("Panel member added successfully!");
+    setAccountForm({ username: "", password: "", fullName: "", role: "issuer", assignedAreas: [] });
+    setMessage(`${accountForm.role.charAt(0).toUpperCase() + accountForm.role.slice(1).replace('_', ' ')} account created successfully!`);
   };
 
-  const removePanelMember = (id: string) => {
+  // Backward compatibility
+  const addPanelMember = () => {
+    setAccountForm(prev => ({ ...prev, role: "panel_member" }));
+    addAccount();
+  };
+
+  const removeAccount = (id: string) => {
     if (id === "admin") {
       setMessage("Cannot remove admin account.");
       return;
     }
-    if (window.confirm("Are you sure you want to remove this panel member?")) {
+    const account = panelMembers.find(m => m.id === id);
+    if (!account) return;
+
+    const roleName = account.role === "panel_member" ? "panel member" :
+                     account.role === "issuer" ? "form issuer" : "admin";
+    if (window.confirm(`Are you sure you want to remove this ${roleName} account?`)) {
       const updated = panelMembers.filter(m => m.id !== id);
       setPanelMembers(updated);
       localStorage.setItem("panelMembers", JSON.stringify(updated));
-      setMessage("Panel member removed.");
+      setMessage(`${roleName.charAt(0).toUpperCase() + roleName.slice(1)} account removed.`);
     }
   };
 
+  // Backward compatibility
+  const removePanelMember = (id: string) => removeAccount(id);
+
   const toggleAreaAssignment = (area: string) => {
-    setPanelForm(prev => ({
+    setAccountForm(prev => ({
       ...prev,
       assignedAreas: prev.assignedAreas.includes(area)
         ? prev.assignedAreas.filter(a => a !== area)
@@ -788,57 +864,7 @@ export default function AdminPage() {
     }));
   };
 
-  // Edit Record
-  const handleEditRecord = (record: DelegateRecord) => {
-    setEditingRecord(record);
-    setEditForm({ ...record });
-    const selected = electoralAreas.find(a => a.name === record.electoralArea);
-    setEditStations(selected ? selected.pollingStations : []);
-  };
 
-  const handleSaveEdit = () => {
-    if (!editingRecord) return;
-
-    const existingPhone = delegateRecords.find(r => r.phone === editForm.phone && r.id !== editingRecord.id);
-    if (existingPhone) {
-      setMessage("A delegate with this phone number already exists.");
-      return;
-    }
-
-    const updatedRecords = delegateRecords.map(r => r.id === editingRecord.id ? { ...r, ...editForm } : r);
-    persistRecords(updatedRecords);
-    setEditingRecord(null);
-    setEditForm({});
-    setMessage("Record updated successfully!");
-  };
-
-  // Report generation
-  const generateReport = () => {
-    let filtered = delegateRecords;
-
-    if (currentUser?.role === "panel_member" && currentUser.assignedAreas.length > 0) {
-      filtered = filtered.filter(r => currentUser!.assignedAreas!.includes(r.electoralArea));
-    }
-
-    if (reportFilterStatus === "RETURNED/VERIFIED") filtered = filtered.filter(r => r.status === "RETURNED" && r.currentDecision === "APPROVED");
-    else if (reportFilterStatus) filtered = filtered.filter(r => r.status === reportFilterStatus);
-
-    if (reportFilterArea) filtered = filtered.filter(r => r.electoralArea === reportFilterArea);
-    if (reportFilterStation) filtered = filtered.filter(r => r.station === reportFilterStation);
-    if (reportFilterPosition) filtered = filtered.filter(r => r.position === reportFilterPosition);
-    if (reportFilterDelegateType) filtered = filtered.filter(r => r.delegateType === reportFilterDelegateType);
-
-    return delegateRecords.reduce((acc, r) => {
-      const area = r.electoralArea || "Unknown";
-      const station = r.station || "Unknown";
-      const position = r.position || "Unknown";
-      if (!acc[area]) acc[area] = {};
-      if (!acc[area][station]) acc[area][station] = {};
-      if (!acc[area][station][position]) acc[area][station][position] = [];
-      acc[area][station][position].push(r);
-      return acc;
-    }, {} as Record<string, Record<string, Record<string, DelegateRecord[]>>>);
-  };
 
   const getUniqueAreas = () => [...new Set(delegateRecords.map(r => r.electoralArea))].sort();
 
@@ -1318,301 +1344,630 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* PANEL MEMBERS */}
-          {activeNav === "panel" && (
-            <div className="space-y-6">
-              <h1 className="text-3xl font-bold text-slate-900">Panel Member Management</h1>
+           {/* ACCOUNTS */}
+           {activeNav === "accounts" && (
+             <div className="space-y-6">
+               <div className="flex items-center justify-between">
+                 <div>
+                   <h1 className="text-3xl font-bold text-slate-900">Account Management</h1>
+                   <p className="text-slate-600">Create and manage user accounts with role-based access control</p>
+                 </div>
+               </div>
 
-              {/* Add Panel Member Form */}
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-xl font-bold text-slate-900 mb-4">Add New Panel Member</h2>
-                <div className="grid md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
-                    <input
-                      value={panelForm.fullName}
-                      onChange={(e) => setPanelForm({ ...panelForm, fullName: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg"
-                      placeholder="Enter full name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Username *</label>
-                    <input
-                      value={panelForm.username}
-                      onChange={(e) => setPanelForm({ ...panelForm, username: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg"
-                      placeholder="Enter username"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Password *</label>
-                    <input
-                      type="password"
-                      value={panelForm.password}
-                      onChange={(e) => setPanelForm({ ...panelForm, password: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg"
-                      placeholder="Enter password"
-                    />
-                  </div>
-                </div>
+               {/* Create Account Form */}
+               <div className="bg-white rounded-2xl shadow-lg p-6">
+                 <h2 className="text-xl font-bold text-slate-900 mb-4">👤 Create New Account</h2>
+                 <div className="grid md:grid-cols-2 gap-4 mb-4">
+                   <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
+                     <input
+                       value={accountForm.fullName}
+                       onChange={(e) => setAccountForm({ ...accountForm, fullName: e.target.value })}
+                       className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                       placeholder="Enter full name"
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">Username *</label>
+                     <input
+                       value={accountForm.username}
+                       onChange={(e) => setAccountForm({ ...accountForm, username: e.target.value })}
+                       className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                       placeholder="Enter username"
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">Password *</label>
+                     <input
+                       type="password"
+                       value={accountForm.password}
+                       onChange={(e) => setAccountForm({ ...accountForm, password: e.target.value })}
+                       className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                       placeholder="Enter password"
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">Role *</label>
+                     <select
+                       value={accountForm.role}
+                       onChange={(e) => setAccountForm({ ...accountForm, role: e.target.value as "admin" | "issuer" | "panel_member", assignedAreas: e.target.value !== "panel_member" ? [] : accountForm.assignedAreas })}
+                       className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                     >
+                       <option value="admin">🧑‍💼 Admin - Full System Access</option>
+                       <option value="issuer">📝 Form Issuer - Data Entry</option>
+                       <option value="panel_member">🧑‍⚖️ Panel Member - Vetting Officer</option>
+                     </select>
+                   </div>
+                 </div>
 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Assigned Electoral Areas *</label>
-                  <div className="flex flex-wrap gap-2">
-                    {electoralAreas.map(area => (
-                      <button
-                        key={area.name}
-                        type="button"
-                        onClick={() => toggleAreaAssignment(area.name)}
-                        className={`px-4 py-2 rounded-lg border transition-colors ${
-                          panelForm.assignedAreas.includes(area.name)
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-                        }`}
-                      >
-                        {area.name}
-                      </button>
-                    ))}
-                  </div>
-                  {panelForm.assignedAreas.length === 0 && (
-                    <p className="text-sm text-red-600 mt-1">At least one area must be selected</p>
-                  )}
-                </div>
+                 {/* Assigned Areas (only for panel members) */}
+                 {accountForm.role === "panel_member" && (
+                   <div className="mb-4">
+                     <label className="block text-sm font-medium text-slate-700 mb-2">🎯 Assigned Electoral Areas *</label>
+                     <div className="flex flex-wrap gap-2">
+                       {electoralAreas.map(area => (
+                         <button
+                           key={area.name}
+                           type="button"
+                           onClick={() => toggleAreaAssignment(area.name)}
+                           className={`px-4 py-2 rounded-lg border transition-colors ${
+                             accountForm.assignedAreas.includes(area.name)
+                               ? "bg-blue-600 text-white border-blue-600"
+                               : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                           }`}
+                         >
+                           {area.name}
+                         </button>
+                       ))}
+                     </div>
+                     {accountForm.assignedAreas.length === 0 && (
+                       <p className="text-sm text-red-600 mt-1">At least one area must be selected for panel members</p>
+                     )}
+                   </div>
+                 )}
 
-                <button
-                  onClick={addPanelMember}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium"
-                >
-                  Add Panel Member
-                </button>
-              </div>
+                 <button
+                   onClick={addAccount}
+                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium"
+                 >
+                   Create Account
+                 </button>
+               </div>
 
-              {/* Panel Members List */}
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-xl font-bold text-slate-900 mb-4">Existing Panel Members</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-100">
-                      <tr>
-                        <th className="text-left py-3 px-3">Username</th>
-                        <th className="text-left py-3 px-3">Full Name</th>
-                        <th className="text-left py-3 px-3">Assigned Areas</th>
-                        <th className="text-left py-3 px-3">Role</th>
-                        <th className="text-center py-3 px-3">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {panelMembers.map(member => (
-                        <tr key={member.id} className="border-b border-slate-100">
-                          <td className="py-3 px-3 font-medium">{member.username}</td>
-                          <td className="py-3 px-3">{member.fullName}</td>
-                          <td className="py-3 px-3">
-                            {member.assignedAreas.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {member.assignedAreas.map(area => (
-                                  <span key={area} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                                    {area}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-slate-400 text-sm">All Areas (Admin)</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-3">
-                            <span className={`px-2 py-1 rounded text-xs font-bold ${member.role === "admin" ? "bg-purple-100 text-purple-700" : "bg-slate-200 text-slate-700"}`}>
-                              {member.role.toUpperCase()}
-                            </span>
-                          </td>
-                          <td className="py-3 px-3 text-center">
-                            {member.id !== "admin" && (
-                              <button
-                                onClick={() => removePanelMember(member.id)}
-                                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
-                              >
-                                Remove
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
+               {/* Accounts List */}
+               <div className="bg-white rounded-2xl shadow-lg p-6">
+                 <h2 className="text-xl font-bold text-slate-900 mb-4">👥 Existing Accounts</h2>
+                 <div className="overflow-x-auto">
+                   <table className="w-full">
+                     <thead className="bg-slate-100">
+                       <tr>
+                         <th className="text-left py-3 px-4">Username</th>
+                         <th className="text-left py-3 px-4">Full Name</th>
+                         <th className="text-left py-3 px-4">Role</th>
+                         <th className="text-left py-3 px-4">Assigned Areas</th>
+                         <th className="text-center py-3 px-4">Actions</th>
+                       </tr>
+                     </thead>
+                     <tbody>
+                       {panelMembers.map(account => (
+                         <tr key={account.id} className="border-b border-slate-100 hover:bg-slate-50">
+                           <td className="py-3 px-4 font-medium">{account.username}</td>
+                           <td className="py-3 px-4">{account.fullName}</td>
+                           <td className="py-3 px-4">
+                             <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                               account.role === "admin" ? "bg-purple-100 text-purple-700" :
+                               account.role === "issuer" ? "bg-green-100 text-green-700" :
+                               "bg-blue-100 text-blue-700"
+                             }`}>
+                               {account.role === "admin" ? "🧑‍💼 ADMIN" :
+                                account.role === "issuer" ? "📝 ISSUER" :
+                                "🧑‍⚖️ PANEL MEMBER"}
+                             </span>
+                           </td>
+                           <td className="py-3 px-4">
+                             {account.assignedAreas.length > 0 ? (
+                               <div className="flex flex-wrap gap-1">
+                                 {account.assignedAreas.map(area => (
+                                   <span key={area} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                                     {area}
+                                   </span>
+                                 ))}
+                               </div>
+                             ) : (
+                               <span className="text-slate-400 text-sm">
+                                 {account.role === "admin" ? "All Areas" : "No Areas Assigned"}
+                               </span>
+                             )}
+                           </td>
+                           <td className="py-3 px-4 text-center">
+                             {account.id !== "admin" && (
+                               <button
+                                 onClick={() => removeAccount(account.id)}
+                                 className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm font-medium"
+                               >
+                                 Remove
+                               </button>
+                             )}
+                           </td>
+                         </tr>
+                       ))}
+                     </tbody>
+                   </table>
+                   {panelMembers.length === 0 && (
+                     <div className="text-center py-8 text-slate-500">No accounts found</div>
+                   )}
+                 </div>
+               </div>
 
-          {/* REPORTS */}
-          {activeNav === "reports" && (
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <h1 className="text-3xl font-bold text-slate-900">Final Election Report</h1>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => {
-                      const report = generateReport();
-                      // Export logic...
-                      setMessage("Export CSV functionality would be implemented here");
-                    }}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium"
-                  >
-                    Export CSV
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMessage("Print PDF functionality would be implemented here");
-                    }}
-                    className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-medium"
-                  >
-                    Print PDF
-                  </button>
-                </div>
-              </div>
+               {/* Role Permissions Guide */}
+               <div className="bg-slate-50 rounded-2xl p-6">
+                 <h2 className="text-xl font-bold text-slate-900 mb-4">🔐 Role Permissions Guide</h2>
+                 <div className="overflow-x-auto">
+                   <table className="w-full">
+                     <thead className="bg-slate-100">
+                       <tr>
+                         <th className="text-left py-3 px-4 font-semibold">Feature</th>
+                         <th className="text-center py-3 px-4 font-semibold">🧑‍💼 Admin</th>
+                         <th className="text-center py-3 px-4 font-semibold">📝 Issuer</th>
+                         <th className="text-center py-3 px-4 font-semibold">🧑‍⚖️ Panel Member</th>
+                       </tr>
+                     </thead>
+                     <tbody>
+                       <tr className="border-b border-slate-100">
+                         <td className="py-3 px-4 font-medium">Create/Edit User Accounts</td>
+                         <td className="py-3 px-4 text-center text-green-600 font-bold">✔</td>
+                         <td className="py-3 px-4 text-center text-red-600 font-bold">❌</td>
+                         <td className="py-3 px-4 text-center text-red-600 font-bold">❌</td>
+                       </tr>
+                       <tr className="border-b border-slate-100">
+                         <td className="py-3 px-4 font-medium">Issue Delegate Forms</td>
+                         <td className="py-3 px-4 text-center text-green-600 font-bold">✔</td>
+                         <td className="py-3 px-4 text-center text-green-600 font-bold">✔</td>
+                         <td className="py-3 px-4 text-center text-red-600 font-bold">❌</td>
+                       </tr>
+                       <tr className="border-b border-slate-100">
+                         <td className="py-3 px-4 font-medium">Edit Records (Before Vetting)</td>
+                         <td className="py-3 px-4 text-center text-green-600 font-bold">✔</td>
+                         <td className="py-3 px-4 text-center text-green-600 font-bold">✔</td>
+                         <td className="py-3 px-4 text-center text-red-600 font-bold">❌</td>
+                       </tr>
+                       <tr className="border-b border-slate-100">
+                         <td className="py-3 px-4 font-medium">Vet/Verify Delegates</td>
+                         <td className="py-3 px-4 text-center text-green-600 font-bold">✔</td>
+                         <td className="py-3 px-4 text-center text-red-600 font-bold">❌</td>
+                         <td className="py-3 px-4 text-center text-green-600 font-bold">✔</td>
+                       </tr>
+                       <tr className="border-b border-slate-100">
+                         <td className="py-3 px-4 font-medium">View All Data</td>
+                         <td className="py-3 px-4 text-center text-green-600 font-bold">✔</td>
+                         <td className="py-3 px-4 text-center text-amber-600 font-bold">Limited</td>
+                         <td className="py-3 px-4 text-center text-amber-600 font-bold">Area Only</td>
+                       </tr>
+                       <tr className="border-b border-slate-100">
+                         <td className="py-3 px-4 font-medium">Access Reports</td>
+                         <td className="py-3 px-4 text-center text-green-600 font-bold">✔</td>
+                         <td className="py-3 px-4 text-center text-amber-600 font-bold">Limited</td>
+                         <td className="py-3 px-4 text-center text-amber-600 font-bold">Limited</td>
+                       </tr>
+                       <tr>
+                         <td className="py-3 px-4 font-medium">Monitor Vetting Activities</td>
+                         <td className="py-3 px-4 text-center text-green-600 font-bold">✔</td>
+                         <td className="py-3 px-4 text-center text-red-600 font-bold">❌</td>
+                         <td className="py-3 px-4 text-center text-red-600 font-bold">❌</td>
+                       </tr>
+                     </tbody>
+                   </table>
+                 </div>
+               </div>
+             </div>
+           )}
 
-              {/* Filters */}
-              <div className="flex flex-wrap gap-3 p-4 bg-white rounded-xl border">
-                <select
-                  value={reportFilterArea}
-                  onChange={(e) => { setReportFilterArea(e.target.value); setReportFilterStation(""); }}
-                  className="px-4 py-2 border border-slate-300 rounded-lg bg-white"
-                >
-                  <option value="">All Electoral Areas</option>
-                  {electoralAreas.map((a) => <option key={a.name} value={a.name}>{a.name}</option>)}
-                </select>
-                <select
-                  value={reportFilterStation}
-                  onChange={(e) => setReportFilterStation(e.target.value)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg bg-white"
-                  disabled={!reportFilterArea}
-                >
-                  <option value="">All Polling Stations</option>
-                  {getUniqueAreas()
-                    .filter(a => !reportFilterArea || a === reportFilterArea)
-                    .flatMap(a => electoralAreas.find(ea => ea.name === a)?.pollingStations || [])
-                    .map((s, i) => <option key={i} value={s.code}>{s.name}</option>)
-                  }
-                </select>
-                <select
-                  value={reportFilterPosition}
-                  onChange={(e) => setReportFilterPosition(e.target.value)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg bg-white"
-                >
-                  <option value="">All Positions</option>
-                  {POSITIONS.map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
-                <select
-                  value={reportFilterDelegateType}
-                  onChange={(e) => setReportFilterDelegateType(e.target.value)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg bg-white"
-                >
-                  <option value="">All Delegate Types</option>
-                  {DELEGATE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <select
-                  value={reportFilterStatus}
-                  onChange={(e) => setReportFilterStatus(e.target.value)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg bg-white"
-                >
-                  <option value="">All Status</option>
-                  <option value="ISSUED">Issued</option>
-                  <option value="RETURNED">Verified</option>
-                  <option value="REJECTED">Rejected</option>
-                  <option value="PENDING_VERIFICATION">Pending</option>
-                  <option value="APPROVED">Approved</option>
-                </select>
-                <button
-                  onClick={() => {
-                    setReportFilterArea("");
-                    setReportFilterStation("");
-                    setReportFilterPosition("");
-                    setReportFilterDelegateType("");
-                    setReportFilterStatus("");
-                  }}
-                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg"
-                >
-                  Clear Filters
-                </button>
-              </div>
+           {/* REPORTS */}
+           {activeNav === "reports" && (() => {
+             // Helper function to get filtered report data
+             const getFilteredReportData = () => {
+               let filtered = delegateRecords;
 
-              {/* Report View Toggle */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setReportView("summary")}
-                  className={`px-4 py-2 rounded-lg font-medium ${reportView === "summary" ? "bg-blue-600 text-white" : "bg-white text-slate-700 border"}`}
-                >
-                  Summary View
-                </button>
-                <button
-                  onClick={() => setReportView("detailed")}
-                  className={`px-4 py-2 rounded-lg font-medium ${reportView === "detailed" ? "bg-blue-600 text-white" : "bg-white text-slate-700 border"}`}
-                >
-                  Detailed View
-                </button>
-              </div>
+               if (currentUser?.role === "panel_member" && currentUser.assignedAreas.length > 0) {
+                 filtered = filtered.filter(r => currentUser.assignedAreas.includes(r.electoralArea));
+               }
 
-              {/* Report Content */}
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-xl font-bold text-slate-900 mb-4">Delegate Records</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-100">
-                      <tr>
-                        <th className="text-left py-3 px-4">Name</th>
-                        <th className="text-left py-3 px-4">Phone</th>
-                        <th className="text-left py-3 px-4">Area</th>
-                        <th className="text-left py-3 px-4">Station</th>
-                        <th className="text-left py-3 px-4">Position</th>
-                        <th className="text-left py-3 px-4">Type</th>
-                        <th className="text-left py-3 px-4">Status</th>
-                        <th className="text-left py-3 px-4">Decision</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {delegateRecords
-                        .filter(r =>
-                          (!reportFilterArea || r.electoralArea === reportFilterArea) &&
-                          (!reportFilterStation || r.stationCode === reportFilterStation) &&
-                          (!reportFilterPosition || r.position === reportFilterPosition) &&
-                          (!reportFilterDelegateType || r.delegateType === reportFilterDelegateType) &&
-                          (!reportFilterStatus || (reportFilterStatus === "APPROVED" ? r.currentDecision === "APPROVED" : r.status === reportFilterStatus))
-                        )
-                        .map((record) => (
-                          <tr key={record.id} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="py-3 px-4 font-medium">{record.surname} {record.firstname}</td>
-                            <td className="py-3 px-4">{record.phone}</td>
-                            <td className="py-3 px-4">{record.electoralArea}</td>
-                            <td className="py-3 px-4">{record.station}</td>
-                            <td className="py-3 px-4">{record.position}</td>
-                            <td className="py-3 px-4">{record.delegateType}</td>
-                            <td className="py-3 px-4">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${record.status === "RETURNED" ? "bg-green-100 text-green-700" : record.status === "REJECTED" ? "bg-red-100 text-red-700" : "bg-slate-200 text-slate-700"}`}>
-                                {record.status}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className={`px-2 py-1 rounded-full text-xs font-bold ${record.currentDecision === "APPROVED" ? "bg-green-100 text-green-700" : record.currentDecision === "REJECTED" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
-                                {record.currentDecision}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                  {delegateRecords.filter(r =>
-                    (!reportFilterArea || r.electoralArea === reportFilterArea) &&
-                    (!reportFilterStation || r.stationCode === reportFilterStation) &&
-                    (!reportFilterPosition || r.position === reportFilterPosition) &&
-                    (!reportFilterDelegateType || r.delegateType === reportFilterDelegateType) &&
-                    (!reportFilterStatus || (reportFilterStatus === "APPROVED" ? r.currentDecision === "APPROVED" : r.status === reportFilterStatus))
-                  ).length === 0 && (
-                    <div className="text-center py-8 text-slate-500">No records found</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+               if (reportFilterArea) filtered = filtered.filter(r => r.electoralArea === reportFilterArea);
+               if (reportFilterStation) filtered = filtered.filter(r => r.stationCode === reportFilterStation);
+               if (reportFilterPosition) filtered = filtered.filter(r => r.position === reportFilterPosition);
+               if (reportFilterDelegateType) filtered = filtered.filter(r => r.delegateType === reportFilterDelegateType);
+               if (reportFilterStatus) {
+                 if (reportFilterStatus === "ISSUED") {
+                   filtered = filtered.filter(r => r.status === "ISSUED");
+                 } else if (reportFilterStatus === "RETURNED") {
+                   filtered = filtered.filter(r => r.status === "RETURNED");
+                 } else if (reportFilterStatus === "VERIFIED") {
+                   filtered = filtered.filter(r => r.status === "RETURNED" && r.currentDecision === "APPROVED");
+                 } else if (reportFilterStatus === "REJECTED") {
+                   filtered = filtered.filter(r => r.status === "REJECTED");
+                 }
+               }
+
+               return filtered;
+             };
+
+             const filteredRecords = getFilteredReportData();
+
+             // Calculate summary stats
+             const totalDelegates = filteredRecords.length;
+             const issued = filteredRecords.filter(r => r.status === "ISSUED").length;
+             const returned = filteredRecords.filter(r => r.status === "RETURNED").length;
+             const verified = filteredRecords.filter(r => r.status === "RETURNED" && r.currentDecision === "APPROVED").length;
+             const rejected = filteredRecords.filter(r => r.status === "REJECTED").length;
+             const returnRate = issued > 0 ? (returned / issued) * 100 : 0;
+             const verificationRate = returned > 0 ? (verified / returned) * 100 : 0;
+
+             // Calculate contests (more than 1 applicant for same position in same polling station)
+             const positionGroups = filteredRecords.reduce((acc, record) => {
+               const key = `${record.electoralArea}|${record.station}|${record.position}`;
+               if (!acc[key]) acc[key] = [];
+               acc[key].push(record);
+               return acc;
+             }, {} as Record<string, DelegateRecord[]>);
+
+             const totalContests = Object.values(positionGroups).filter(group => group.length > 1).length;
+             const totalUnopposed = Object.values(positionGroups).filter(group => group.length === 1).length;
+
+             const oldDelegates = filteredRecords.filter(r => r.delegateType === "Old Delegate").length;
+             const newDelegates = filteredRecords.filter(r => r.delegateType === "New Delegate").length;
+
+             // Calculate area summary data
+             const areaSummaryData = filteredRecords.reduce((acc, record) => {
+               const area = record.electoralArea || "Unknown";
+               if (!acc[area]) {
+                 acc[area] = {
+                   area,
+                   issued: 0,
+                   returned: 0,
+                   verified: 0,
+                   rejected: 0,
+                   contests: 0,
+                   total: 0
+                 };
+               }
+
+               // Count by status
+               if (record.status === "ISSUED") acc[area].issued++;
+               if (record.status === "RETURNED") acc[area].returned++;
+               if (record.status === "RETURNED" && record.currentDecision === "APPROVED") acc[area].verified++;
+               if (record.status === "REJECTED") acc[area].rejected++;
+
+               acc[area].total++;
+
+               return acc;
+             }, {} as Record<string, any>);
+
+             // Add contest counts to area summary
+             Object.values(positionGroups).forEach(group => {
+               if (group.length > 0) {
+                 const area = group[0].electoralArea || "Unknown";
+                 if (areaSummaryData[area]) {
+                   areaSummaryData[area].contests += group.length > 1 ? 1 : 0;
+                 }
+               }
+             });
+
+             const areaSummaryArray = Object.values(areaSummaryData);
+
+             // Calculate detailed view data for contests only or detailed view
+             const detailedViewData = reportView === "contests" ?
+               Object.entries(positionGroups)
+                 .filter(([_, applicants]) => applicants.length > 1)
+                 .map(([key, applicants]) => {
+                   const [area, station, position] = key.split('|');
+                   return {
+                     area,
+                     station,
+                     position,
+                     applicants,
+                     status: "CONTEST"
+                   };
+                 }) :
+               Object.entries(positionGroups).map(([key, applicants]) => {
+                 const [area, station, position] = key.split('|');
+                 const status = applicants.length > 1 ? "CONTEST" : "UNOPPOSED";
+                 return {
+                   area,
+                   station,
+                   position,
+                   applicants,
+                   status
+                 };
+               });
+
+             return (
+               <div className="space-y-6">
+                 {/* Header Section */}
+                 <div className="flex flex-wrap items-center justify-between gap-4">
+                   <div>
+                     <h1 className="text-3xl font-bold text-slate-900">Final Election Report</h1>
+                     <p className="text-slate-600">Comprehensive election overview and analytics</p>
+                   </div>
+                   <div className="flex flex-wrap gap-2">
+                     <button
+                       onClick={handleExportCSV}
+                       className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium"
+                     >
+                       📤 Export CSV
+                     </button>
+                     <button
+                       onClick={handleExportExcel}
+                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+                     >
+                       📤 Export Excel
+                     </button>
+                     <button
+                       onClick={() => {
+                         setMessage("Print PDF functionality would be implemented here");
+                       }}
+                       className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-medium"
+                     >
+                       🖨️ Print PDF
+                     </button>
+                   </div>
+                 </div>
+
+                 {/* View Options */}
+                 <div className="flex flex-wrap gap-2 p-4 bg-slate-50 rounded-xl">
+                   <span className="font-medium text-slate-700 mr-4">🎛️ View Options:</span>
+                   <button
+                     onClick={() => setReportView("summary")}
+                     className={`px-4 py-2 rounded-lg font-medium ${reportView === "summary" ? "bg-blue-600 text-white" : "bg-white text-slate-700 border border-slate-300"}`}
+                   >
+                     Summary View
+                   </button>
+                   <button
+                     onClick={() => setReportView("detailed")}
+                     className={`px-4 py-2 rounded-lg font-medium ${reportView === "detailed" ? "bg-blue-600 text-white" : "bg-white text-slate-700 border border-slate-300"}`}
+                   >
+                     Detailed View
+                   </button>
+                   <button
+                     onClick={() => setReportView("contests")}
+                     className={`px-4 py-2 rounded-lg font-medium ${reportView === "contests" ? "bg-blue-600 text-white" : "bg-white text-slate-700 border border-slate-300"}`}
+                   >
+                     Contests Only
+                   </button>
+                 </div>
+
+                 {/* Filters Section */}
+                 <div className="bg-white rounded-xl shadow-lg p-6 sticky top-4">
+                   <h2 className="text-xl font-bold text-slate-900 mb-4">🔍 Filters</h2>
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4">
+                     <div>
+                       <label className="block text-sm font-medium text-slate-700 mb-1">Electoral Area</label>
+                       <select
+                         value={reportFilterArea}
+                         onChange={(e) => { setReportFilterArea(e.target.value); setReportFilterStation(""); }}
+                         className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                       >
+                         <option value="">All</option>
+                         {electoralAreas.map((a) => <option key={a.name} value={a.name}>{a.name}</option>)}
+                       </select>
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-slate-700 mb-1">Polling Station</label>
+                       <select
+                         value={reportFilterStation}
+                         onChange={(e) => setReportFilterStation(e.target.value)}
+                         className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                         disabled={!reportFilterArea}
+                       >
+                         <option value="">All</option>
+                         {reportFilterArea &&
+                           electoralAreas.find(a => a.name === reportFilterArea)?.pollingStations.map((s) => (
+                             <option key={s.code} value={s.code}>{s.name} ({s.code})</option>
+                           ))
+                         }
+                       </select>
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-slate-700 mb-1">Position</label>
+                       <select
+                         value={reportFilterPosition}
+                         onChange={(e) => setReportFilterPosition(e.target.value)}
+                         className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                       >
+                         <option value="">All</option>
+                         {POSITIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+                       </select>
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-slate-700 mb-1">Delegate Type</label>
+                       <select
+                         value={reportFilterDelegateType}
+                         onChange={(e) => setReportFilterDelegateType(e.target.value)}
+                         className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                       >
+                         <option value="">All</option>
+                          {DELEGATE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                       </select>
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                       <select
+                         value={reportFilterStatus}
+                         onChange={(e) => setReportFilterStatus(e.target.value)}
+                         className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                       >
+                         <option value="">All</option>
+                         <option value="ISSUED">Issued</option>
+                         <option value="RETURNED">Returned</option>
+                         <option value="VERIFIED">Verified</option>
+                         <option value="REJECTED">Rejected</option>
+                       </select>
+                     </div>
+                   </div>
+                   <div className="flex gap-3">
+                     <button
+                        onClick={() => {
+                          setMessage("Filters applied successfully");
+                        }}
+                       className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
+                     >
+                       Apply Filters
+                     </button>
+                     <button
+                       onClick={() => {
+                         setReportFilterArea("");
+                         setReportFilterStation("");
+                         setReportFilterPosition("");
+                         setReportFilterDelegateType("");
+                         setReportFilterStatus("");
+                         setMessage("Filters cleared");
+                       }}
+                       className="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium"
+                     >
+                       Clear Filters
+                     </button>
+                   </div>
+                 </div>
+
+                 {/* Summary Cards */}
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+                   <div className="bg-white rounded-xl shadow-lg p-6">
+                     <div className="text-3xl font-bold text-slate-900">{totalDelegates}</div>
+                     <div className="text-slate-600 mt-1">Total Delegates</div>
+                   </div>
+                   <div className="bg-white rounded-xl shadow-lg p-6">
+                     <div className="text-3xl font-bold text-slate-900">{returnRate.toFixed(1)}%</div>
+                     <div className="text-slate-600 mt-1">Return Rate</div>
+                   </div>
+                   <div className="bg-white rounded-xl shadow-lg p-6">
+                     <div className="text-3xl font-bold text-slate-900">{verificationRate.toFixed(1)}%</div>
+                     <div className="text-slate-600 mt-1">Verification Rate</div>
+                   </div>
+                   <div className="bg-white rounded-xl shadow-lg p-6">
+                     <div className="text-3xl font-bold text-slate-900">{totalContests}</div>
+                     <div className="text-slate-600 mt-1">Total Contests</div>
+                   </div>
+                   <div className="bg-white rounded-xl shadow-lg p-6">
+                     <div className="text-3xl font-bold text-slate-900">{totalUnopposed}</div>
+                     <div className="text-slate-600 mt-1">Total Unopposed</div>
+                   </div>
+                   <div className="bg-white rounded-xl shadow-lg p-6">
+                     <div className="text-3xl font-bold text-slate-900">{oldDelegates}</div>
+                     <div className="text-slate-600 mt-1">Old Delegates</div>
+                   </div>
+                   <div className="bg-white rounded-xl shadow-lg p-6">
+                     <div className="text-3xl font-bold text-slate-900">{newDelegates}</div>
+                     <div className="text-slate-600 mt-1">New Delegates</div>
+                   </div>
+                 </div>
+
+                 {/* Electoral Area Summary Table */}
+                 <div className="bg-white rounded-xl shadow-lg p-6">
+                   <h2 className="text-xl font-bold text-slate-900 mb-4">🗺️ Electoral Area Summary</h2>
+                   <div className="overflow-x-auto">
+                     <table className="w-full">
+                       <thead className="bg-slate-100">
+                         <tr>
+                           <th className="text-left py-3 px-4 font-semibold">Electoral Area</th>
+                           <th className="text-left py-3 px-4 font-semibold">Issued</th>
+                           <th className="text-left py-3 px-4 font-semibold">Returned</th>
+                           <th className="text-left py-3 px-4 font-semibold">Verified</th>
+                           <th className="text-left py-3 px-4 font-semibold">Rejected</th>
+                           <th className="text-left py-3 px-4 font-semibold">Contests</th>
+                           <th className="text-left py-3 px-4 font-semibold">Total</th>
+                         </tr>
+                       </thead>
+                       <tbody>
+                         {areaSummaryArray.map((areaData: any, index: number) => (
+                           <tr key={index} className={`border-b border-slate-100 hover:bg-slate-50 ${areaData.contests > 0 ? "bg-red-50" : ""}`}>
+                             <td className="py-3 px-4 font-medium">{areaData.area}</td>
+                             <td className="py-3 px-4">{areaData.issued}</td>
+                             <td className="py-3 px-4">{areaData.returned}</td>
+                             <td className="py-3 px-4">{areaData.verified}</td>
+                             <td className="py-3 px-4">{areaData.rejected}</td>
+                             <td className="py-3 px-4">
+                               <span className={`px-3 py-1 rounded-full text-xs font-bold ${areaData.contests > 0 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                                 {areaData.contests}
+                               </span>
+                             </td>
+                             <td className="py-3 px-4">{areaData.total}</td>
+                           </tr>
+                         ))}
+                         {areaSummaryArray.length === 0 && (
+                           <tr>
+                             <td colSpan={7} className="py-8 text-center text-slate-500">No data available</td>
+                           </tr>
+                         )}
+                       </tbody>
+                       <tfoot className="bg-slate-50">
+                         <tr>
+                           <td className="py-3 px-4 font-bold text-slate-900">TOTAL</td>
+                           <td className="py-3 px-4 font-bold text-slate-900">{issued}</td>
+                           <td className="py-3 px-4 font-bold text-slate-900">{returned}</td>
+                           <td className="py-3 px-4 font-bold text-slate-900">{verified}</td>
+                           <td className="py-3 px-4 font-bold text-slate-900">{rejected}</td>
+                           <td className="py-3 px-4 font-bold text-slate-900">{totalContests}</td>
+                           <td className="py-3 px-4 font-bold text-slate-900">{totalDelegates}</td>
+                         </tr>
+                       </tfoot>
+                     </table>
+                   </div>
+                 </div>
+
+                 {/* Detailed View */}
+                 {(reportView === "detailed" || reportView === "contests") && (
+                   <div className="bg-white rounded-xl shadow-lg p-6">
+                     <h2 className="text-xl font-bold text-slate-900 mb-4">
+                       📋 {reportView === "contests" ? "Contests Only" : "Detailed View"}
+                     </h2>
+                     <div className="overflow-x-auto">
+                       <table className="w-full">
+                         <thead className="bg-slate-100">
+                           <tr>
+                             <th className="text-left py-3 px-4 font-semibold">Electoral Area</th>
+                             <th className="text-left py-3 px-4 font-semibold">Polling Station</th>
+                             <th className="text-left py-3 px-4 font-semibold">Position</th>
+                             <th className="text-left py-3 px-4 font-semibold">Applicants</th>
+                             <th className="text-left py-3 px-4 font-semibold">Status</th>
+                           </tr>
+                         </thead>
+                         <tbody>
+                           {detailedViewData.map((item: any, index: number) => (
+                             <tr key={index} className="border-b border-slate-100 hover:bg-slate-50">
+                               <td className="py-3 px-4 font-medium">{item.area}</td>
+                               <td className="py-3 px-4">{item.station}</td>
+                               <td className="py-3 px-4">{item.position}</td>
+                               <td className="py-3 px-4">
+                                 <div className="space-y-2">
+                                   {item.applicants.map((applicant: DelegateRecord, idx: number) => (
+                                     <div key={idx} className="p-2 bg-slate-50 rounded">
+                                       <div className="font-medium">{applicant.surname} {applicant.firstname}</div>
+                                       <div className="text-sm text-slate-500">{applicant.delegateType} • {applicant.phone}</div>
+                                     </div>
+                                   ))}
+                                 </div>
+                               </td>
+                               <td className="py-3 px-4">
+                                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${item.status === "CONTEST" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                                   {item.status}
+                                 </span>
+                               </td>
+                             </tr>
+                           ))}
+                           {detailedViewData.length === 0 && (
+                             <tr>
+                               <td colSpan={5} className="py-8 text-center text-slate-500">
+                                 {reportView === "contests" ? "No contested positions found" : "No data available"}
+                               </td>
+                             </tr>
+                           )}
+                         </tbody>
+                       </table>
+                     </div>
+                   </div>
+                 )}
+               </div>
+             );
+           })()}
         </div>
       </main>
     </div>

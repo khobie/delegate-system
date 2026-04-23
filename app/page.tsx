@@ -8,7 +8,7 @@ type Account = {
   id?: string;
   username: string;
   password: string;
-  role: "admin" | "panel_member";
+  role: "admin" | "issuer" | "panel_member";
   assignedAreas?: string[];
   fullName?: string;
 };
@@ -17,6 +17,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6xQ3q41bzRYMgNyvqC
 
 const DEFAULT_ACCOUNTS: Account[] = [
   { username: "admin", password: "delegate123", role: "admin", assignedAreas: [], fullName: "System Administrator" },
+  { username: "issuer", password: "issuer123", role: "issuer", assignedAreas: [], fullName: "Data Entry Officer" },
   { username: "panel1", password: "panel123", role: "panel_member", assignedAreas: ["AHAFO YE TWIA AKWAMU", "KWAHU ATIBIE"], fullName: "John Smith" },
   { username: "panel2", password: "panel123", role: "panel_member", assignedAreas: ["DAMPASE", "OTI AKWAMU"], fullName: "Jane Doe" },
 ];
