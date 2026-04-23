@@ -347,39 +347,62 @@ export default function AdminPage() {
   const [activeNav, setActiveNav] = useState("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Force appropriate default tabs based on role
-  useEffect(() => {
-    if (currentUser?.role === "panel_member" && activeNav !== "vetting") {
-      setActiveNav("vetting");
-    } else if (currentUser?.role === "issuer" && activeNav !== "issue") {
-      setActiveNav("issue");
-    } else if (currentUser?.role === "admin" && activeNav !== "dashboard") {
-      setActiveNav("dashboard");
-    }
-  }, [currentUser]);
+   // Force appropriate default tabs based on role
+   useEffect(() => {
+     if (currentUser?.role === "panel_member" && activeNav !== "vetting") {
+       setActiveNav("vetting");
+     } else if (currentUser?.role === "issuer" && activeNav !== "issue") {
+       setActiveNav("issue");
+     } else if (currentUser?.role === "admin" && activeNav !== "dashboard") {
+       setActiveNav("dashboard");
+     }
+   }, [currentUser]);
+   // Vetting State
+   const [selectedRecord, setSelectedRecord] = useState<DelegateRecord | null>(null);
 
-  // Issue Form
-  const [issueForm, setIssueForm] = useState<Record<string, any>>({});
-  const [issueStations, setIssueStations] = useState<{name: string; code: string}[]>([]);
+   // Issue Form
+   const [issueForm, setIssueForm] = useState<Record<string, any>>({});
+   const [issueStations, setIssueStations] = useState<{name: string; code: string}[]>([]);
 
-  // Vetting State
-  const [vettingRecords, setVettingRecords] = useState<DelegateRecord[]>([]);
-  const [selectedRecord, setSelectedRecord] = useState<DelegateRecord | null>(null);
-  const [vettingSearchArea, setVettingSearchArea] = useState("");
-  const [vettingSearchStation, setVettingSearchStation] = useState("");
-  const [vettingSearchStations, setVettingSearchStations] = useState<{name: string; code: string}[]>([]);
-  const [vettingViewMode, setVettingViewMode] = useState<"list" | "assigned">("list");
+   // Vetting State
+   const [vettingRecords, setVettingRecords] = useState<DelegateRecord[]>([]);
+   const [vettingSearchArea, setVettingSearchArea] = useState("");
+   const [vettingSearchStation, setVettingSearchStation] = useState("");
+   const [vettingSearchStations, setVettingSearchStations] = useState<{name: string; code: string}[]>([]);
+   const [vettingViewMode, setVettingViewMode] = useState<"list" | "assigned">("list");
 
-  // Vetting Form State
-  const [overallComment, setOverallComment] = useState("");
-  const [vettingQuestions, setVettingQuestions] = useState({
-    aspirantPresent: false,
-    partyMembershipCardSighted: false,
-    nameMatchesPartyRegister: false,
-    votersIdOrGhanaCardSighted: false,
-    passportPhotoMatches: false,
-    membershipConfirmedAtStation: false,
-  });
+   // Vetting Form State
+   const [overallComment, setOverallComment] = useState("");
+    const [vettingQuestions, setVettingQuestions] = useState({
+      aspirantPresent: false,
+      partyMembershipCardSighted: false,
+      nameMatchesPartyRegister: false,
+      votersIdOrGhanaCardSighted: false,
+      passportPhotoMatches: false,
+      membershipConfirmedAtStation: false,
+    });
+
+    // Handle modal keyboard events and body scroll lock
+    useEffect(() => {
+      if (selectedRecord) {
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+
+        const handleEscape = (e: KeyboardEvent) => {
+          if (e.key === 'Escape') {
+            setSelectedRecord(null);
+          }
+        };
+
+        document.addEventListener('keydown', handleEscape);
+        return () => {
+          document.body.style.overflow = 'unset';
+          document.removeEventListener('keydown', handleEscape);
+        };
+      } else {
+        document.body.style.overflow = 'unset';
+      }
+    }, [selectedRecord]);
 
   // Account Form
   const [accountForm, setAccountForm] = useState({
@@ -1313,34 +1336,7 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Vetting Detail Panel */}
-              {selectedRecord && (
-                <div className="bg-white rounded-2xl shadow-lg p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-slate-900">
-                      Vetting: {selectedRecord.surname} {selectedRecord.firstname}
-                    </h2>
-                    <button
-                      onClick={() => setSelectedRecord(null)}
-                      className="text-slate-500 hover:text-slate-700 text-2xl"
-                    >
-                      ×
-                    </button>
-                  </div>
 
-                  <SingleVettingCard
-                    record={selectedRecord}
-                    onDecision={handleVettingDecision}
-                    currentDecision={selectedRecord.currentDecision}
-                    overallComment={overallComment}
-                    setOverallComment={setOverallComment}
-                    vettingQuestions={vettingQuestions}
-                    setVettingQuestions={setVettingQuestions}
-                    panelMember={currentUser!}
-                    decisionHistory={selectedRecord.decisions || []}
-                  />
-                </div>
-              )}
             </div>
           )}
 
@@ -1965,11 +1961,54 @@ export default function AdminPage() {
                      </div>
                    </div>
                  )}
-               </div>
-             );
-           })()}
-        </div>
-      </main>
-    </div>
-  );
-}
+                </div>
+              );
+            })()}
+
+            {/* Vetting Modal */}
+            {selectedRecord && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                {/* Backdrop */}
+                <div
+                  className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                  onClick={() => setSelectedRecord(null)}
+                />
+                
+                {/* Modal Content */}
+                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                  {/* Header */}
+                  <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between z-10">
+                    <h2 className="text-xl font-bold text-slate-900">
+                      Vetting: {selectedRecord.surname} {selectedRecord.firstname}
+                    </h2>
+                    <button
+                      onClick={() => setSelectedRecord(null)}
+                      className="text-slate-500 hover:text-slate-700 text-2xl leading-none"
+                      aria-label="Close modal"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  {/* Body */}
+                  <div className="p-6">
+                    <SingleVettingCard
+                      record={selectedRecord}
+                      onDecision={handleVettingDecision}
+                      currentDecision={selectedRecord.currentDecision}
+                      overallComment={overallComment}
+                      setOverallComment={setOverallComment}
+                      vettingQuestions={vettingQuestions}
+                      setVettingQuestions={setVettingQuestions}
+                      panelMember={currentUser!}
+                      decisionHistory={selectedRecord.decisions || []}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+         </div>
+       </main>
+     </div>
+   );
+ }
