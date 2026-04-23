@@ -84,7 +84,7 @@ const NAV_ITEMS = [
 
 // ==================== COMPONENTS ====================
 
-// Modern Detail Item component
+// Bright Modern Detail Item component
 function DetailItem({ 
   label, 
   value, 
@@ -92,26 +92,27 @@ function DetailItem({
 }: { 
   label: string; 
   value: string; 
-  badge?: "success" | "error" | "default" 
+  badge?: "success" | "error" | "default" | "warning" 
 }) {
   const badgeStyles = {
-    success: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    error: "bg-red-100 text-red-700 border-red-200",
-    default: "bg-slate-100 text-slate-700 border-slate-200"
+    success: "bg-gradient-to-r from-green-400 to-emerald-500 text-white border-transparent shadow-md",
+    error: "bg-gradient-to-r from-red-400 to-rose-500 text-white border-transparent shadow-md",
+    warning: "bg-gradient-to-r from-amber-400 to-orange-500 text-white border-transparent shadow-md",
+    default: "bg-gradient-to-r from-sky-100 to-blue-100 text-sky-800 border-sky-200 shadow-sm"
   };
 
   return (
     <div className="group">
-      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">
+      <span className="text-xs font-bold text-sky-600 uppercase tracking-wider mb-1 block">
         {label}
       </span>
       <div className="flex items-center gap-2">
         {badge ? (
-          <span className={`px-2.5 py-1 rounded-lg text-sm font-semibold border ${badgeStyles[badge]}`}>
+          <span className={`px-3 py-1.5 rounded-lg text-sm font-bold border ${badgeStyles[badge]} shadow-sm`}>
             {value}
           </span>
         ) : (
-          <p className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+          <p className="font-bold text-slate-800 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-cyan-600 transition-all duration-300">
             {value}
           </p>
         )}
@@ -185,7 +186,7 @@ function SingleVettingCard({
            <DetailItem 
              label="Status" 
              value={record.status}
-             badge={record.status === "RETURNED" ? "success" : record.status === "REJECTED" ? "error" : "default"}
+             badge={record.status === "RETURNED" ? "success" : record.status === "REJECTED" ? "error" : "warning"}
            />
            <DetailItem label="Electoral Area" value={record.electoralArea} />
            <DetailItem label="Polling Station" value={record.station} />
@@ -201,83 +202,137 @@ function SingleVettingCard({
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
         <h3 className="font-bold text-lg mb-4">Vetting Questions Checklist</h3>
         <div className="space-y-3">
-          <label className="flex items-start gap-3 p-3 bg-white rounded-lg border border-amber-200">
-            <input
-              type="checkbox"
-              checked={vettingQuestions.aspirantPresent}
-              onChange={(e) => setVettingQuestions({ ...vettingQuestions, aspirantPresent: e.target.checked })}
-              className="mt-1 w-5 h-5"
-            />
+          <label className="flex items-start gap-3 p-4 bg-gradient-to-r from-sky-50 to-blue-50 rounded-xl border-2 border-sky-200 hover:border-sky-300 hover:shadow-md transition-all duration-200 group">
+            <div className="relative mt-0.5">
+              <input
+                type="checkbox"
+                checked={vettingQuestions.aspirantPresent}
+                onChange={(e) => setVettingQuestions({ ...vettingQuestions, aspirantPresent: e.target.checked })}
+                className="w-5 h-5 rounded border-2 border-sky-300 text-sky-600 focus:ring-2 focus:ring-sky-400 focus:ring-offset-0 transition-all duration-200"
+              />
+              {vettingQuestions.aspirantPresent && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <svg className="w-3.5 h-3.5 text-sky-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+            </div>
             <div>
-              <span className="font-medium">Aspirant present in person</span>
-              <p className="text-sm text-slate-600">The aspirant/delegate is physically present</p>
+              <span className="font-bold text-sky-900">Aspirant present in person</span>
+              <p className="text-sm text-sky-700 mt-0.5">The aspirant/delegate is physically present</p>
             </div>
           </label>
 
-          <label className="flex items-start gap-3 p-3 bg-white rounded-lg border border-amber-200">
-            <input
-              type="checkbox"
-              checked={vettingQuestions.partyMembershipCardSighted}
-              onChange={(e) => setVettingQuestions({ ...vettingQuestions, partyMembershipCardSighted: e.target.checked })}
-              className="mt-1 w-5 h-5"
-            />
+          <label className="flex items-start gap-3 p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border-2 border-emerald-200 hover:border-emerald-300 hover:shadow-md transition-all duration-200 group">
+            <div className="relative mt-0.5">
+              <input
+                type="checkbox"
+                checked={vettingQuestions.partyMembershipCardSighted}
+                onChange={(e) => setVettingQuestions({ ...vettingQuestions, partyMembershipCardSighted: e.target.checked })}
+                className="w-5 h-5 rounded border-2 border-emerald-300 text-emerald-600 focus:ring-2 focus:ring-emerald-400 focus:ring-offset-0 transition-all duration-200"
+              />
+              {vettingQuestions.partyMembershipCardSighted && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <svg className="w-3.5 h-3.5 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+            </div>
             <div>
-              <span className="font-medium">Party Membership ID Card sighted</span>
-              <p className="text-sm text-slate-600">Valid party membership card was presented</p>
+              <span className="font-bold text-emerald-900">Party Membership ID Card sighted</span>
+              <p className="text-sm text-emerald-700 mt-0.5">Valid party membership card was presented</p>
             </div>
           </label>
 
-          <label className="flex items-start gap-3 p-3 bg-white rounded-lg border border-amber-200">
-            <input
-              type="checkbox"
-              checked={vettingQuestions.nameMatchesPartyRegister}
-              onChange={(e) => setVettingQuestions({ ...vettingQuestions, nameMatchesPartyRegister: e.target.checked })}
-              className="mt-1 w-5 h-5"
-            />
+          <label className="flex items-start gap-3 p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border-2 border-violet-200 hover:border-violet-300 hover:shadow-md transition-all duration-200 group">
+            <div className="relative mt-0.5">
+              <input
+                type="checkbox"
+                checked={vettingQuestions.nameMatchesPartyRegister}
+                onChange={(e) => setVettingQuestions({ ...vettingQuestions, nameMatchesPartyRegister: e.target.checked })}
+                className="w-5 h-5 rounded border-2 border-violet-300 text-violet-600 focus:ring-2 focus:ring-violet-400 focus:ring-offset-0 transition-all duration-200"
+              />
+              {vettingQuestions.nameMatchesPartyRegister && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <svg className="w-3.5 h-3.5 text-violet-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+            </div>
             <div>
-              <span className="font-medium">Name matches Party Register for this Polling Station</span>
-              <p className="text-sm text-slate-600">Verified against the official party register</p>
+              <span className="font-bold text-violet-900">Name matches Party Register</span>
+              <p className="text-sm text-violet-700 mt-0.5">Verified against the official party register</p>
             </div>
           </label>
 
-          <label className="flex items-start gap-3 p-3 bg-white rounded-lg border border-amber-200">
-            <input
-              type="checkbox"
-              checked={vettingQuestions.votersIdOrGhanaCardSighted}
-              onChange={(e) => setVettingQuestions({ ...vettingQuestions, votersIdOrGhanaCardSighted: e.target.checked })}
-              className="mt-1 w-5 h-5"
-            />
+          <label className="flex items-start gap-3 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border-2 border-amber-200 hover:border-amber-300 hover:shadow-md transition-all duration-200 group">
+            <div className="relative mt-0.5">
+              <input
+                type="checkbox"
+                checked={vettingQuestions.votersIdOrGhanaCardSighted}
+                onChange={(e) => setVettingQuestions({ ...vettingQuestions, votersIdOrGhanaCardSighted: e.target.checked })}
+                className="w-5 h-5 rounded border-2 border-amber-300 text-amber-600 focus:ring-2 focus:ring-amber-400 focus:ring-offset-0 transition-all duration-200"
+              />
+              {vettingQuestions.votersIdOrGhanaCardSighted && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <svg className="w-3.5 h-3.5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+            </div>
             <div>
-              <span className="font-medium">National Voters ID or Ghana Card sighted</span>
-              <p className="text-sm text-slate-600">Presented valid national ID (used if Party ID unavailable)</p>
+              <span className="font-bold text-amber-900">National ID (Voters Card or Ghana Card)</span>
+              <p className="text-sm text-amber-700 mt-0.5">Presented valid national identification</p>
             </div>
           </label>
 
-          <label className="flex items-start gap-3 p-3 bg-white rounded-lg border border-amber-200">
-            <input
-              type="checkbox"
-              checked={vettingQuestions.passportPhotoMatches}
-              onChange={(e) => setVettingQuestions({ ...vettingQuestions, passportPhotoMatches: e.target.checked })}
-              className="mt-1 w-5 h-5"
-            />
+          <label className="flex items-start gap-3 p-4 bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl border-2 border-rose-200 hover:border-rose-300 hover:shadow-md transition-all duration-200 group">
+            <div className="relative mt-0.5">
+              <input
+                type="checkbox"
+                checked={vettingQuestions.passportPhotoMatches}
+                onChange={(e) => setVettingQuestions({ ...vettingQuestions, passportPhotoMatches: e.target.checked })}
+                className="w-5 h-5 rounded border-2 border-rose-300 text-rose-600 focus:ring-2 focus:ring-rose-400 focus:ring-offset-0 transition-all duration-200"
+              />
+              {vettingQuestions.passportPhotoMatches && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <svg className="w-3.5 h-3.5 text-rose-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+            </div>
             <div>
-              <span className="font-medium">Passport photo (red background) matches applicant</span>
-              <p className="text-sm text-slate-600">Applicant's appearance matches the photo on the ID</p>
+              <span className="font-bold text-rose-900">Passport photo matches applicant</span>
+              <p className="text-sm text-rose-700 mt-0.5">Photo on form matches the person present</p>
             </div>
           </label>
 
-          <label className="flex items-start gap-3 p-3 bg-white rounded-lg border border-amber-200">
-            <input
-              type="checkbox"
-              checked={vettingQuestions.membershipConfirmedAtStation}
-              onChange={(e) => setVettingQuestions({ ...vettingQuestions, membershipConfirmedAtStation: e.target.checked })}
-              className="mt-1 w-5 h-5"
-            />
-            <div>
-              <span className="font-medium">Membership Registration confirmed at THIS Polling Station</span>
-              <p className="text-sm text-slate-600">Registration verified at this specific polling station</p>
+          <label className="flex items-start gap-3 p-4 bg-gradient-to-r from-cyan-50 to-teal-50 rounded-xl border-2 border-cyan-200 hover:border-cyan-300 hover:shadow-md transition-all duration-200 group">
+            <div className="relative mt-0.5">
+              <input
+                type="checkbox"
+                checked={vettingQuestions.membershipConfirmedAtStation}
+                onChange={(e) => setVettingQuestions({ ...vettingQuestions, membershipConfirmedAtStation: e.target.checked })}
+                className="w-5 h-5 rounded border-2 border-cyan-300 text-cyan-600 focus:ring-2 focus:ring-cyan-400 focus:ring-offset-0 transition-all duration-200"
+              />
+              {vettingQuestions.membershipConfirmedAtStation && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <svg className="w-3.5 h-3.5 text-cyan-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
             </div>
-          </label>
+            <div>
+              <span className="font-bold text-cyan-900">Membership confirmed at station level</span>
+              <p className="text-sm text-cyan-700 mt-0.5">Local party officials verified membership</p>
+            </div>
+           </label>
         </div>
       </div>
 
@@ -293,38 +348,85 @@ function SingleVettingCard({
         />
       </div>
 
-      {/* Decision Section */}
-      <div className="bg-slate-50 rounded-xl p-4 mb-6">
-        <h3 className="font-bold text-lg mb-4">Decision</h3>
-        <div className="flex gap-3 mb-4">
-          <button
-            onClick={() => onDecision("APPROVED", overallComment, vettingQuestions)}
-            className={`flex-1 font-semibold py-3 rounded-xl transition-colors ${record.currentDecision === "APPROVED" ? "bg-green-600 text-white" : "bg-green-100 hover:bg-green-200 text-green-700"}`}
-          >
-            ✓ Approve
-          </button>
-          <button
-            onClick={() => onDecision("REJECTED", overallComment, vettingQuestions)}
-            className={`flex-1 font-semibold py-3 rounded-xl transition-colors ${record.currentDecision === "REJECTED" ? "bg-red-600 text-white" : "bg-red-100 hover:bg-red-200 text-red-700"}`}
-          >
-            ✗ Reject
-          </button>
-          <button
-            onClick={() => onDecision("PENDING", overallComment, vettingQuestions)}
-            className={`flex-1 font-semibold py-3 rounded-xl transition-colors ${record.currentDecision === "PENDING" ? "bg-amber-600 text-white" : "bg-amber-100 hover:bg-amber-200 text-amber-700"}`}
-          >
-            ⏳ Pending
-          </button>
-        </div>
+        {/* Decision Section with Bright Colors */}
+        <div className="bg-gradient-to-r from-sky-50/50 via-blue-50/50 to-indigo-50/50 rounded-2xl p-6 mb-6 border-2 border-sky-100/50 shadow-sm">
+          <h3 className="font-bold text-lg mb-4 text-sky-900">Decision Making</h3>
+          <div className="flex gap-3 mb-4">
+            {/* Approve Button */}
+            <button
+              onClick={() => onDecision("APPROVED", overallComment, vettingQuestions)}
+              className={`relative flex-1 font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-95 shadow-lg ${
+                record.currentDecision === "APPROVED" 
+                  ? "bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-green-500/50" 
+                  : "bg-gradient-to-r from-green-300 to-emerald-400 text-green-900 hover:shadow-green-400/50"
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span className="text-lg">Approve</span>
+              </div>
+              {record.currentDecision === "APPROVED" && (
+                <div className="absolute inset-0 rounded-xl bg-white/20 animate-pulse"></div>
+              )}
+            </button>
 
-        {/* Current Decision Display */}
-        <div className="text-center p-3 rounded-lg bg-slate-100">
-          <span className="text-sm text-slate-600">Current Decision: </span>
-          <span className={`font-bold px-3 py-1 rounded ${record.currentDecision === "APPROVED" ? "bg-green-200 text-green-800" : record.currentDecision === "REJECTED" ? "bg-red-200 text-red-800" : "bg-amber-200 text-amber-800"}`}>
-            {record.currentDecision}
-          </span>
+            {/* Reject Button */}
+            <button
+              onClick={() => onDecision("REJECTED", overallComment, vettingQuestions)}
+              className={`relative flex-1 font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-95 shadow-lg ${
+                record.currentDecision === "REJECTED" 
+                  ? "bg-gradient-to-r from-red-400 to-rose-500 text-white shadow-red-500/50" 
+                  : "bg-gradient-to-r from-red-300 to-rose-400 text-red-900 hover:shadow-red-400/50"
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+                <span className="text-lg">Reject</span>
+              </div>
+              {record.currentDecision === "REJECTED" && (
+                <div className="absolute inset-0 rounded-xl bg-white/20 animate-pulse"></div>
+              )}
+            </button>
+
+            {/* Pending Button */}
+            <button
+              onClick={() => onDecision("PENDING", overallComment, vettingQuestions)}
+              className={`relative flex-1 font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-95 shadow-lg ${
+                record.currentDecision === "PENDING" 
+                  ? "bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-amber-500/50" 
+                  : "bg-gradient-to-r from-amber-300 to-orange-400 text-amber-900 hover:shadow-amber-400/50"
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+                <span className="text-lg">Pending</span>
+              </div>
+              {record.currentDecision === "PENDING" && (
+                <div className="absolute inset-0 rounded-xl bg-white/20 animate-pulse"></div>
+              )}
+            </button>
+          </div>
+
+          {/* Current Decision Display */}
+          <div className="text-center p-4 rounded-xl bg-gradient-to-r from-slate-100 to-sky-50 border-2 border-sky-200">
+            <span className="text-sm font-semibold text-slate-600">Current Decision: </span>
+            <span className={`font-bold px-4 py-2 rounded-lg ${
+              record.currentDecision === "APPROVED" 
+                ? "bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-md" 
+                : record.currentDecision === "REJECTED" 
+                ? "bg-gradient-to-r from-red-400 to-rose-500 text-white shadow-md"
+                : "bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-md"
+            }`}>
+              {record.currentDecision}
+            </span>
+          </div>
         </div>
-      </div>
 
       {/* Decision History */}
       {decisionHistory.length > 0 && (
@@ -340,12 +442,18 @@ function SingleVettingCard({
             <div className="space-y-2 mt-4">
               {decisionHistory.map((decision) => (
                 <div key={decision.id} className="border-l-4 border-slate-300 pl-4 py-2 bg-white rounded">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium">{decision.panelMemberName}</span>
-                    <span className={`px-2 py-1 rounded text-xs font-bold ${decision.decision === "APPROVED" ? "bg-green-100 text-green-700" : decision.decision === "REJECTED" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
-                      {decision.decision}
-                    </span>
-                  </div>
+                   <div className="flex items-center justify-between mb-1">
+                     <span className="font-medium text-slate-700">{decision.panelMemberName}</span>
+                     <span className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm ${
+                       decision.decision === "APPROVED" 
+                         ? "bg-gradient-to-r from-green-400 to-emerald-500 text-white" 
+                         : decision.decision === "REJECTED" 
+                         ? "bg-gradient-to-r from-red-400 to-rose-500 text-white"
+                         : "bg-gradient-to-r from-amber-400 to-orange-500 text-white"
+                     }`}>
+                       {decision.decision}
+                     </span>
+                   </div>
                   <p className="text-sm text-slate-600">{decision.comments || "No comment"}</p>
                   <p className="text-xs text-slate-400 mt-1">
                     {new Date(decision.timestamp).toLocaleString()}
@@ -1996,62 +2104,63 @@ export default function AdminPage() {
               );
             })()}
 
-            {/* Modern Vetting Modal */}
+            {/* Modern Bright Vetting Modal */}
             {selectedRecord && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-                {/* Animated Backdrop */}
+                {/* Animated Bright Backdrop */}
                 <div
-                  className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-blue-950/70 to-slate-900/90 backdrop-blur-xl modal-backdrop"
+                  className="absolute inset-0 bg-gradient-to-br from-sky-400/80 via-cyan-500/60 to-emerald-400/70 backdrop-blur-xl modal-backdrop"
                   onClick={() => setSelectedRecord(null)}
                 />
                 
                 {/* Modal Container */}
                 <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col modal-content">
-                  {/* Modern Gradient Header */}
-                  <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-t-2xl p-6 text-white shadow-2xl relative overflow-hidden">
-                    {/* Decorative elements */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full blur-xl translate-y-1/2 -translate-x-1/2"></div>
+                  {/* Vibrant Gradient Header */}
+                  <div className="bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 rounded-t-2xl p-6 text-white shadow-2xl relative overflow-hidden">
+                    {/* Decorative bright elements */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/20 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-yellow-300/20 rounded-full blur-xl translate-y-1/2 -translate-x-1/2"></div>
+                    <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-pink-300/15 rounded-full blur-xl"></div>
                     
                     <div className="relative flex items-center justify-between">
                       <div className="flex items-center gap-5">
-                        {/* Icon with subtle glow */}
-                        <div className="relative p-4 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 shadow-lg">
-                          <div className="absolute inset-0 bg-white/20 rounded-2xl blur-lg"></div>
+                        {/* Icon with bright glow */}
+                        <div className="relative p-4 bg-white/25 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg">
+                          <div className="absolute inset-0 bg-white/30 rounded-2xl blur-lg"></div>
                           <span className="text-3xl relative z-10">🔍</span>
                         </div>
                         <div>
                           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight">
-                            Vetting Assessment
+                            ✨ Vetting Assessment
                           </h2>
-                          <p className="text-blue-100 text-sm sm:text-base mt-2 flex items-center gap-2">
-                            <span className="font-semibold">{selectedRecord.surname} {selectedRecord.firstname}</span>
-                            <span className="w-1 h-1 bg-blue-300 rounded-full"></span>
-                            <span>{selectedRecord.position}</span>
+                          <p className="text-white/90 text-sm sm:text-base mt-2 flex items-center gap-2">
+                            <span className="font-semibold text-white">{selectedRecord.surname} {selectedRecord.firstname}</span>
+                            <span className="w-1 h-1 bg-yellow-300 rounded-full animate-pulse"></span>
+                            <span className="text-cyan-100">{selectedRecord.position}</span>
                           </p>
-                          {/* Location badges */}
+                          {/* Location badges with bright colors */}
                           <div className="flex flex-wrap items-center gap-2 mt-3">
-                            <div className="px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 text-xs font-medium flex items-center gap-1.5">
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30 text-xs font-medium flex items-center gap-1.5">
+                              <svg className="w-3 h-3 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                               </svg>
-                              {selectedRecord.electoralArea}
+                              <span className="text-white">{selectedRecord.electoralArea}</span>
                             </div>
-                            <div className="px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 text-xs font-medium flex items-center gap-1.5">
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30 text-xs font-medium flex items-center gap-1.5">
+                              <svg className="w-3 h-3 text-pink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                               </svg>
-                              {selectedRecord.station}
+                              <span className="text-white">{selectedRecord.station}</span>
                             </div>
                           </div>
                         </div>
                       </div>
                       
-                      {/* Close button */}
+                      {/* Close button with bright hover */}
                       <button
                         onClick={() => setSelectedRecord(null)}
-                        className="group p-3 hover:bg-white/10 rounded-xl transition-all duration-200 border border-transparent hover:border-white/20 hover:rotate-90 backdrop-blur-sm"
+                        className="group p-3 hover:bg-white/20 rounded-xl transition-all duration-200 border border-transparent hover:border-white/30 hover:rotate-90 backdrop-blur-sm"
                         aria-label="Close modal"
                       >
                         <svg className="w-6 h-6 text-white/90 group-hover:text-white transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2061,8 +2170,8 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  {/* Scrollable Content Area */}
-                  <div className="flex-1 bg-gradient-to-b from-slate-50 to-white rounded-b-2xl shadow-2xl overflow-y-auto max-h-[60vh] modal-scrollbar">
+                  {/* Scrollable Content Area - Bright theme */}
+                  <div className="flex-1 bg-gradient-to-b from-sky-50/80 via-blue-50/60 to-white rounded-b-2xl shadow-2xl overflow-y-auto max-h-[60vh] modal-scrollbar border-t border-sky-100/50">
                     <div className="p-6 sm:p-8">
                       <SingleVettingCard
                         record={selectedRecord}
@@ -2078,26 +2187,26 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  {/* Enhanced Footer */}
-                  <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-4 pb-3 text-xs text-slate-500">
+                  {/* Enhanced Bright Footer */}
+                  <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-4 pb-3 text-xs">
                     <div className="flex items-center gap-2.5">
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200 shadow-sm">
                         <span className="text-sm">💡</span>
-                        <span className="font-medium text-blue-700">Tip</span>
+                        <span className="font-medium text-amber-700">Pro Tip</span>
                       </div>
-                      <span className="flex items-center gap-1.5">
+                      <span className="flex items-center gap-1.5 text-slate-600">
                         Press 
-                        <kbd className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 rounded font-mono text-xs font-semibold text-slate-700 transition-colors border border-slate-300">Esc</kbd> 
+                        <kbd className="px-2 py-0.5 bg-white border border-sky-200 rounded font-mono text-xs font-semibold text-sky-700 transition-colors shadow-sm">Esc</kbd> 
                         to close
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-50 rounded-lg border border-green-100">
-                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.4)]"></span>
-                        <span className="font-medium text-green-700">Auto-saved</span>
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200 shadow-sm">
+                        <span className="w-2 h-2 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></span>
+                        <span className="font-medium text-emerald-700">Auto-saved</span>
                       </div>
-                      <span className="text-slate-400">•</span>
-                      <span>{selectedRecord.surname} {selectedRecord.firstname}</span>
+                      <span className="text-sky-400">•</span>
+                      <span className="text-slate-600 font-medium">{selectedRecord.surname} {selectedRecord.firstname}</span>
                     </div>
                   </div>
                 </div>
