@@ -218,7 +218,7 @@ const saveRecords = (newRecords: RecordItem[]) => {
   const getFilteredRecordsByArea = () => {
     return records.filter((r) => {
       if (filterElectoralArea && r.electoralArea !== filterElectoralArea) return false;
-      if (filterPollingStation && r.station !== filterPollingStation) return false;
+      if (filterPollingStation && r.stationCode !== filterPollingStation) return false;
       if (filterPosition && r.position !== filterPosition) return false;
       if (filterDelegateType && r.delegateType !== filterDelegateType) return false;
       return true;
@@ -475,9 +475,15 @@ const saveRecords = (newRecords: RecordItem[]) => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-red-800 py-8 px-4 flex items-center justify-center">
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8 w-full max-w-md">
-          <div className="bg-gradient-to-r from-red-800 via-red-700 to-blue-900 px-6 py-5 rounded-t-xl -mx-8 -mt-8 mb-6">
-            <h1 className="text-xl font-bold text-white text-center">NEW JUABEN SOUTH</h1>
-            <p className="text-red-100 text-sm text-center">Constituency Form Issuance</p>
+          <div className="bg-gradient-to-r from-red-700 via-blue-700 to-green-600 px-6 py-5 rounded-t-xl -mx-8 -mt-8 mb-6 relative overflow-hidden">
+            {/* NPP Party Pattern - subtle star accents */}
+            <div className="absolute top-2 right-2 w-8 h-8 bg-white/10 rounded-full blur"></div>
+            <div className="absolute bottom-2 left-2 w-6 h-6 bg-white/10 rounded-full blur"></div>
+            <div className="relative text-center">
+              <h1 className="text-xl font-bold text-white tracking-wide">NEW JUABEN SOUTH</h1>
+              <p className="text-yellow-300 text-sm font-semibold mt-1">NEW PATRIOTIC PARTY</p>
+              <p className="text-blue-100 text-xs mt-1">✓ Vetting & Verification System</p>
+            </div>
           </div>
           
           <div className="space-y-4">
@@ -507,11 +513,15 @@ const saveRecords = (newRecords: RecordItem[]) => {
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-red-800 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden mb-6">
-          <div className="bg-gradient-to-r from-red-800 via-red-700 to-blue-900 px-6 py-5 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-white">NEW JUABEN SOUTH</h1>
-              <p className="text-red-100 text-sm">Constituency Form Issuance System</p>
-            </div>
+           <div className="bg-gradient-to-r from-red-700 via-blue-700 to-green-600 px-6 py-5 flex flex-wrap items-center justify-between gap-3 relative overflow-hidden">
+             {/* NPP decorative elements */}
+             <div className="absolute top-3 right-20 w-4 h-4 bg-yellow-400 rounded-full blur-sm"></div>
+             <div className="absolute bottom-3 left-10 w-3 h-3 bg-white/20 rounded-full blur-sm"></div>
+             <div>
+               <h1 className="text-2xl font-bold text-white tracking-wide">NEW JUABEN SOUTH</h1>
+               <p className="text-yellow-300 text-sm font-semibold">NEW PATRIOTIC PARTY</p>
+               <p className="text-blue-100 text-xs mt-1">Vetting & Verification System</p>
+             </div>
             <div className="flex gap-3">
               {currentUser?.role === "admin" && (
                 <Link href="/admin" className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm">
@@ -817,7 +827,7 @@ const saveRecords = (newRecords: RecordItem[]) => {
                       disabled={filterStations.length === 0}>
                       <option value="">All Stations</option>
                       {filterStations.map((s, i) => (
-                        <option key={i} value={s.name}>{s.name} ({s.code})</option>
+                        <option key={i} value={s.code}>{s.name} ({s.code})</option>
                       ))}
                     </select>
                   </div>

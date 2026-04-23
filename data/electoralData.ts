@@ -39,7 +39,7 @@ export const electoralAreas = [
     { name: "PENTECOST CHURCH TWO STREAMS 2", code: "E050405" },
     { name: "PENTECOST CHURCH TWO STREAMS 3", code: "E050406" }
   ]},
-  { name: "NYEREDE NORTH", pollingStations: [
+  { name: "KORLE NKWANTA", pollingStations: [
     { name: "ANGLICAN PRI. SCH.KORLE NKWANTA 1", code: "E050501A" },
     { name: "ANGLICAN PRI. SCH.KORLE NKWANTA 1", code: "E050501B" },
     { name: "ANGLICAN PRI. SCH.KORLE NKWANTA 2", code: "E050502" },
@@ -50,7 +50,7 @@ export const electoralAreas = [
     { name: "METHODIST CHURCH OKPER", code: "E050507A" },
     { name: "METHODIST CHURCH OKPER", code: "E050507B" }
   ]},
-  { name: "NYEREDE SOUTH", pollingStations: [
+  { name: "BONYA", pollingStations: [
     { name: "PRESBY PRIM. SCH. BONYA 1", code: "E050601A" },
     { name: "PRESBY PRIM. SCH. BONYA 1", code: "E050601B" },
     { name: "PRESBY PRIM. SCH. BONYA 2", code: "E050602" },
@@ -59,7 +59,7 @@ export const electoralAreas = [
     { name: "M.A JHS. SCH. TROM 2", code: "E050604A" },
     { name: "M.A JHS. SCH. TROM 2", code: "E050604B" }
   ]},
-  { name: "RESDENTIAL AREA", pollingStations: [
+  { name: "RESIDENTIAL AREA", pollingStations: [
     { name: "POLICE CANTEEN GALLOWAY", code: "E050701" },
     { name: "SEC/TEC. SCH. LIBRARY", code: "E050702" },
     { name: "SEC/TEC. SCH. PAVILLION", code: "E050703" },
@@ -83,7 +83,7 @@ export const electoralAreas = [
   { name: "ANGLICAN", pollingStations: [
     { name: "ST. PETER'S JHS K'DUA", code: "E051001" },
     { name: "ST. PETER'S PRIMARY K'DUA", code: "E051002" },
-    { name: "ST. MARY'S KINDARGATEN K'DUA", code: "E051003" }
+    { name: "ST. MARY'S KINDERGARTEN K'DUA", code: "E051003" }
   ]},
   { name: "ADONTUA", pollingStations: [
     { name: "APOSTOLIC CHURCH OF GHANA 1", code: "E051101" },
@@ -102,8 +102,8 @@ export const electoralAreas = [
     { name: "METHODIST C&D SCHOOL K'DUA 2", code: "E051303" }
   ]},
   { name: "OLD ESTATE WEST", pollingStations: [
-    { name: "VETINARY DEPT OFFICE K'DUA 1", code: "E051401" },
-    { name: "VETINARY DEPT OFFICE K'DUA 2", code: "E051402" },
+    { name: "VETERINARY DEPT OFFICE K'DUA 1", code: "E051401" },
+    { name: "VETERINARY DEPT OFFICE K'DUA 2", code: "E051402" },
     { name: "DAASEBRE POLLING STATION", code: "E051403" },
     { name: "VOTER HOUSE POLLING STATION", code: "E051404A" },
     { name: "VOTER HOUSE POLLING STATION", code: "E051404B" },
@@ -126,8 +126,8 @@ export const electoralAreas = [
   ]},
   { name: "NSUKWAOSO ABOTANSO", pollingStations: [
     { name: "ST. ANNE'S JHS KOFORIDUA", code: "E051701" },
-    { name: "ST. ANNE'S KINDARGATEN 1", code: "E051702" },
-    { name: "ST. ANNE'S KINDARGATEN 2", code: "E051703" },
+    { name: "ST. ANNE'S KINDERGARTEN 1", code: "E051702" },
+    { name: "ST. ANNE'S KINDERGARTEN 2", code: "E051703" },
     { name: "ANGLICAN PRIMARY", code: "E051704" },
     { name: "SARKODIE JHS KOFORIDUA 1", code: "E051705" },
     { name: "SARKODIE JHS KOFORIDUA 2", code: "E051706" },

@@ -75,11 +75,11 @@ const POSITIONS = ["CHAIRMAN", "SECRETARY", "ORGANIZER", "WOMEN ORGANIZER", "YOU
 const DELEGATE_TYPES = ["Old Delegate", "New Delegate"];
 
 const NAV_ITEMS = [
-  { id: "dashboard", label: "Dashboard", icon: "📊", roles: ["admin"] },
-  { id: "issue", label: "Issue Form", icon: "📝", roles: ["admin", "issuer"] },
-  { id: "vetting", label: "Vetting Workspace", icon: "✓", roles: ["admin", "panel_member"] },
-  { id: "accounts", label: "Accounts", icon: "👤", roles: ["admin"] },
-  { id: "reports", label: "Reports", icon: "📋", roles: ["admin", "issuer", "panel_member"] },
+  { id: "dashboard", label: "📊 Dashboard", icon: "📊", roles: ["admin"] },
+  { id: "issue", label: "📝 Issue Form", icon: "📝", roles: ["admin", "issuer"] },
+  { id: "vetting", label: "✓ Vetting System", icon: "✓", roles: ["admin", "panel_member"] },
+  { id: "accounts", label: "👤 Accounts", icon: "👤", roles: ["admin"] },
+  { id: "reports", label: "📋 Reports", icon: "📋", roles: ["admin", "issuer", "panel_member"] },
 ];
 
 // ==================== COMPONENTS ====================
@@ -480,6 +480,8 @@ export default function AdminPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const [loginError, setLoginError] = useState("");
 
   // UI State
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -637,7 +639,9 @@ export default function AdminPage() {
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("currentUser");
-    window.location.href = "/";
+    setCurrentUser(null);
+    setIsAuthorized(false);
+    setLoginForm({ username: "", password: "" });
   };
 
    // Persist records
@@ -824,12 +828,12 @@ export default function AdminPage() {
       approved: assignedRecords.filter(r => r.currentDecision === "APPROVED").length,
       rejected: assignedRecords.filter(r => r.currentDecision === "REJECTED").length,
       pending: assignedRecords.filter(r => r.currentDecision === "PENDING").length,
-      contests: Object.values(assignedRecords.reduce((acc, r) => {
-        const key = `${r.electoralArea}|${r.station}|${r.position}`;
-        if (!acc[key]) acc[key] = { count: 0 };
-        acc[key].count++;
-        return acc;
-      }, {} as Record<string, { count: number }>)).filter(c => c.count > 1).length,
+       contests: Object.values(assignedRecords.reduce((acc, r) => {
+         const key = `${r.electoralArea}|${r.stationCode}|${r.position}`;
+         if (!acc[key]) acc[key] = { count: 0 };
+         acc[key].count++;
+         return acc;
+       }, {} as Record<string, { count: number }>)).filter(c => c.count > 1).length,
     };
   };
 
@@ -849,7 +853,7 @@ export default function AdminPage() {
     }
 
     if (stationFilter) {
-      filtered = filtered.filter(r => r.station === stationFilter);
+      filtered = filtered.filter(r => r.stationCode === stationFilter);
     }
 
     if (searchTerm) {
@@ -1038,14 +1042,60 @@ export default function AdminPage() {
   );
 
   if (!isAuthorized) {
+    const handleAdminLogin = () => {
+      const savedAccounts = localStorage.getItem("panelMembers");
+      let accounts = DEFAULT_ACCOUNTS;
+      if (savedAccounts) {
+        try {
+          const parsed = JSON.parse(savedAccounts);
+          if (Array.isArray(parsed) && parsed.length > 0) accounts = parsed;
+        } catch {}
+      }
+      const matchingAccount = accounts.find(
+        (acc: any) => acc.username === loginForm.username && acc.password === loginForm.password
+      );
+      if (matchingAccount) {
+        setCurrentUser(matchingAccount as User);
+        setIsAuthorized(true);
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("currentUser", JSON.stringify(matchingAccount));
+        setLoginError("");
+      } else {
+        setLoginError("Invalid username or password");
+      }
+    };
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-red-800 py-8 px-4 flex items-center justify-center">
-        <div className="max-w-xl w-full bg-white/95 rounded-3xl shadow-xl p-8 text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-4">Access Denied</h1>
-          <p className="text-slate-600 mb-6">You do not have permission to access the admin dashboard.</p>
-          <Link href="/" className="inline-block bg-blue-900 text-white px-6 py-3 rounded-lg hover:bg-blue-800">
-            Back to Issuance
-          </Link>
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8 w-full max-w-md">
+          <div className="bg-gradient-to-r from-red-700 via-blue-700 to-green-600 px-6 py-5 rounded-t-xl -mx-8 -mt-8 mb-6 relative overflow-hidden">
+            <div className="relative text-center">
+              <h1 className="text-xl font-bold text-white tracking-wide">NEW JUABEN SOUTH</h1>
+              <p className="text-yellow-300 text-sm font-semibold mt-1">NEW PATRIOTIC PARTY</p>
+              <p className="text-blue-100 text-xs mt-1">Admin Dashboard Login</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Username</label>
+              <input type="text" value={loginForm.username} placeholder="Enter username"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+              <input type="password" value={loginForm.password} placeholder="Enter password"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()} />
+            </div>
+            {loginError && <p className="text-red-600 text-sm">{loginError}</p>}
+            <button className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg"
+              onClick={handleAdminLogin}>Login</button>
+            <Link href="/" className="block text-center text-sm text-slate-500 hover:text-slate-700 mt-4">
+              ← Back to Home
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -1055,37 +1105,59 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-slate-100 flex">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? "w-64" : "w-20"} bg-slate-900 text-white transition-all duration-300 flex flex-col`}>
-        <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-          {sidebarOpen && <h1 className="text-lg font-bold">Admin Panel</h1>}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-800 rounded-lg">
-            {sidebarOpen ? "◀" : "▶"}
-          </button>
-        </div>
-        <nav className="flex-1 p-4 space-y-2">
-          {NAV_ITEMS
-            .filter(item => item.roles.includes(currentUser?.role || "admin"))
-            .map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveNav(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeNav === item.id ? "bg-blue-600" : "hover:bg-slate-800"}`}
-            >
-              <span className="text-xl">{item.icon}</span>
-              {sidebarOpen && <span>{item.label}</span>}
+        <aside className={`${sidebarOpen ? "w-64" : "w-20"} bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white transition-all duration-300 flex flex-col border-r-4 border-red-600`}>
+          {/* NPP Themed Header */}
+          <div className="p-4 border-b border-slate-700 bg-gradient-to-r from-red-900/80 via-blue-900/80 to-green-900/80 flex items-center justify-between shadow-lg">
+            {sidebarOpen && (
+              <div className="flex items-center gap-2">
+                {/* NPP Logo placeholder */}
+                <div className="relative">
+                  <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
+                    <span className="text-xs font-bold">NPP</span>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-900"></div>
+                </div>
+                <div className="flex flex-col">
+                  <h1 className="text-sm font-bold text-white leading-tight">NEW JUABEN SOUTH</h1>
+                  <p className="text-xs text-yellow-300 font-semibold">NPP Vetting System</p>
+                </div>
+              </div>
+            )}
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-700/50 rounded-lg text-white transition-colors border border-transparent hover:border-white/20">
+              {sidebarOpen ? "◀" : "▶"}
             </button>
-          ))}
-        </nav>
-        <div className="p-4 border-t border-slate-700 space-y-2">
-          {currentUser?.role === "admin" && (
-            <Link href="/" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors">
-              <span className="text-xl">🏠</span>
-              {sidebarOpen && <span>Back to Home</span>}
-            </Link>
-          )}
+          </div>
+          
+          {/* Navigation with NPP colors */}
+          <nav className="flex-1 p-4 space-y-2">
+            {NAV_ITEMS
+              .filter(item => item.roles.includes(currentUser?.role || "admin"))
+              .map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveNav(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                  activeNav === item.id 
+                    ? "bg-gradient-to-r from-red-600 via-red-500 to-blue-600 text-white shadow-lg transform scale-105 border-l-4 border-yellow-400" 
+                    : "hover:bg-slate-800/50 text-slate-300 hover:text-white border-l-4 border-transparent"
+                }`}
+              >
+                <span className="text-xl">{item.icon}</span>
+                {sidebarOpen && <span className="font-medium">{item.label}</span>}
+              </button>
+            ))}
+          </nav>
+        <div className="p-4 border-t border-slate-700 bg-slate-800/50 space-y-2">
+          <button
+            onClick={() => { handleLogout(); window.location.href = "/"; }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-700/50 transition-colors text-slate-300 hover:text-white border border-transparent hover:border-green-500/30"
+          >
+            <span className="text-xl">🏠</span>
+            {sidebarOpen && <span>Back to Home</span>}
+          </button>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors text-red-400 hover:text-red-300"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-900/50 transition-colors text-red-400 hover:text-red-300 border border-transparent hover:border-red-500/30"
           >
             <span className="text-xl">🚪</span>
             {sidebarOpen && <span>Logout</span>}
@@ -1104,49 +1176,66 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* DASHBOARD */}
-          {activeNav === "dashboard" && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-                  <p className="text-slate-600">Overview of delegate form management</p>
-                </div>
-                <div className="text-sm text-slate-500">
-                  Logged in as: {currentUser?.fullName || currentUser?.username} ({currentUser?.role})
-                </div>
-              </div>
+           {/* DASHBOARD */}
+           {activeNav === "dashboard" && (
+             <div className="space-y-6">
+               <div className="text-center py-6 bg-gradient-to-r from-red-50 via-blue-50 to-green-50 rounded-2xl border-2 border-red-100 mb-6">
+                 <h1 className="text-4xl font-bold bg-gradient-to-r from-red-700 via-blue-700 to-green-700 bg-clip-text text-transparent">
+                   NEW JUABEN SOUTH
+                 </h1>
+                 <h2 className="text-2xl font-bold text-red-700 mt-2">NEW PATRIOTIC PARTY</h2>
+                 <p className="text-lg font-semibold text-slate-700 mt-3">Vetting & Verification Dashboard</p>
+                 <div className="mt-3 flex items-center justify-center gap-3">
+                   <div className="h-1 w-20 bg-red-600 rounded"></div>
+                   <span className="px-4 py-1 bg-gradient-to-r from-red-100 to-blue-100 border-2 border-red-300 rounded-full text-sm font-bold text-red-800">CONSTITUENCY DASHBOARD</span>
+                   <div className="h-1 w-20 bg-blue-600 rounded"></div>
+                 </div>
+               </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                 <div className="text-sm text-slate-500">
+                   Logged in as: {currentUser?.fullName || currentUser?.username} ({currentUser?.role})
+                 </div>
+               </div>
+               </div>
 
-              {/* Stats Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl text-white shadow-lg">
-                  <div className="text-4xl font-bold">{stats.total}</div>
-                  <div className="text-blue-100 mt-1">Total</div>
-                </div>
-                <div className="bg-gradient-to-br from-amber-500 to-orange-500 p-6 rounded-2xl text-white shadow-lg">
-                  <div className="text-4xl font-bold">{stats.issued}</div>
-                  <div className="text-amber-100 mt-1">Issued</div>
-                </div>
-                <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-6 rounded-2xl text-white shadow-lg">
-                  <div className="text-4xl font-bold">{stats.approved}</div>
-                  <div className="text-green-100 mt-1">Approved</div>
-                </div>
-                <div className="bg-gradient-to-br from-red-500 to-rose-600 p-6 rounded-2xl text-white shadow-lg">
-                  <div className="text-4xl font-bold">{stats.rejected}</div>
-                  <div className="text-red-100 mt-1">Rejected</div>
-                </div>
-                <div className="bg-gradient-to-br from-amber-500 to-yellow-600 p-6 rounded-2xl text-white shadow-lg">
-                  <div className="text-4xl font-bold">{stats.pending}</div>
-                  <div className="text-amber-100 mt-1">Pending</div>
-                </div>
-                <div className="bg-gradient-to-br from-purple-500 to-violet-600 p-6 rounded-2xl text-white shadow-lg">
-                  <div className="text-4xl font-bold">{stats.contests}</div>
-                  <div className="text-purple-100 mt-1">Contests</div>
-                </div>
-                <div className="bg-gradient-to-br from-cyan-500 to-teal-600 p-6 rounded-2xl text-white shadow-lg">
-                  <div className="text-4xl font-bold">{stats.returned}</div>
-                  <div className="text-cyan-100 mt-1">Returned</div>
-                </div>
+               {/* Stats Cards with NPP Colors */}
+               <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
+                 {/* Total - NPP Red */}
+                 <div className="bg-gradient-to-br from-red-600 to-red-700 p-6 rounded-2xl text-white shadow-lg shadow-red-500/30 border-2 border-red-500">
+                   <div className="text-4xl font-bold">{stats.total}</div>
+                   <div className="text-red-100 mt-1 font-semibold">Total</div>
+                 </div>
+                 {/* Issued - NPP Green */}
+                 <div className="bg-gradient-to-br from-green-600 to-emerald-700 p-6 rounded-2xl text-white shadow-lg shadow-green-500/30 border-2 border-green-500">
+                   <div className="text-4xl font-bold">{stats.issued}</div>
+                   <div className="text-green-100 mt-1 font-semibold">Issued</div>
+                 </div>
+                 {/* Approved - Bright Green */}
+                 <div className="bg-gradient-to-br from-emerald-500 to-green-600 p-6 rounded-2xl text-white shadow-lg shadow-emerald-500/30 border-2 border-emerald-500">
+                   <div className="text-4xl font-bold">{stats.approved}</div>
+                   <div className="text-emerald-100 mt-1 font-semibold">Approved</div>
+                 </div>
+                 {/* Rejected - Bright Red */}
+                 <div className="bg-gradient-to-br from-rose-600 to-red-700 p-6 rounded-2xl text-white shadow-lg shadow-rose-500/30 border-2 border-rose-500">
+                   <div className="text-4xl font-bold">{stats.rejected}</div>
+                   <div className="text-rose-100 mt-1 font-semibold">Rejected</div>
+                 </div>
+                 {/* Pending - NPP Yellow/Gold */}
+                 <div className="bg-gradient-to-br from-amber-500 to-yellow-500 p-6 rounded-2xl text-white shadow-lg shadow-amber-500/30 border-2 border-amber-500">
+                   <div className="text-4xl font-bold">{stats.pending}</div>
+                   <div className="text-amber-100 mt-1 font-semibold">Pending</div>
+                 </div>
+                 {/* Contests - NPP Blue */}
+                 <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl text-white shadow-lg shadow-blue-500/30 border-2 border-blue-500">
+                   <div className="text-4xl font-bold">{stats.contests}</div>
+                   <div className="text-blue-100 mt-1 font-semibold">Contests</div>
+                 </div>
+                 {/* Returned - Cyan accent */}
+                 <div className="bg-gradient-to-br from-cyan-500 to-blue-600 p-6 rounded-2xl text-white shadow-lg shadow-cyan-500/30 border-2 border-cyan-500">
+                   <div className="text-4xl font-bold">{stats.returned}</div>
+                   <div className="text-cyan-100 mt-1 font-semibold">Returned</div>
+                 </div>
               </div>
 
               {/* Quick Stats */}
@@ -1182,10 +1271,21 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ISSUE FORM */}
-          {activeNav === "issue" && (
-            <div className="space-y-6">
-              <h1 className="text-3xl font-bold text-slate-900">Issue Delegate Form</h1>
+           {/* ISSUE FORM */}
+           {activeNav === "issue" && (
+             <div className="space-y-6">
+               <div className="text-center py-6 bg-gradient-to-r from-red-50 via-blue-50 to-green-50 rounded-2xl border-2 border-red-100">
+                 <h1 className="text-4xl font-bold bg-gradient-to-r from-red-700 via-blue-700 to-green-700 bg-clip-text text-transparent">
+                   NEW JUABEN SOUTH
+                 </h1>
+                 <h2 className="text-2xl font-bold text-red-700 mt-2">NEW PATRIOTIC PARTY</h2>
+                 <p className="text-lg font-semibold text-slate-700 mt-3">Delegate Form Issuance</p>
+                 <div className="mt-3 flex items-center justify-center gap-3">
+                   <div className="h-1 w-16 bg-red-600 rounded"></div>
+                   <span className="px-4 py-1 bg-gradient-to-r from-red-100 to-blue-100 border-2 border-red-300 rounded-full text-sm font-bold text-red-800">ISSUE PORTAL</span>
+                   <div className="h-1 w-16 bg-blue-600 rounded"></div>
+                 </div>
+               </div>
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="grid md:grid-cols-3 gap-4 mb-4">
                   <div>
@@ -1289,9 +1389,12 @@ export default function AdminPage() {
                 </div>
                 <button
                   onClick={handleIssueSubmit}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors"
+                  className="w-full bg-gradient-to-r from-red-600 via-blue-600 to-green-600 hover:from-red-700 hover:via-blue-700 hover:to-green-700 text-white font-bold py-3.5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
-                  Issue Form
+                  <span className="flex items-center justify-center gap-2">
+                    <span>✓</span>
+                    Issue Delegate Form
+                  </span>
                 </button>
               </div>
             </div>
@@ -1300,7 +1403,20 @@ export default function AdminPage() {
           {/* VETTING WORKSPACE */}
           {activeNav === "vetting" && (
             <div className="space-y-6">
-              <h1 className="text-3xl font-bold text-slate-900">Vetting Workspace</h1>
+               <div className="text-center mb-8">
+                 <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 via-blue-700 to-green-600 bg-clip-text text-transparent">
+                   NEW JUABEN SOUTH
+                 </h1>
+                 <h2 className="text-2xl font-bold text-red-700 mt-2">
+                   NEW PATRIOTIC PARTY
+                 </h2>
+                 <p className="text-lg font-semibold text-slate-700 mt-2">Vetting & Verification System</p>
+                 <div className="mt-3 flex items-center justify-center gap-2">
+                   <div className="h-1 w-16 bg-red-600 rounded"></div>
+                   <span className="px-3 py-1 bg-gradient-to-r from-red-50 to-blue-50 border border-red-200 rounded-full text-sm font-bold text-red-800">EST. 2024</span>
+                   <div className="h-1 w-16 bg-blue-600 rounded"></div>
+                 </div>
+               </div>
 
               {/* View Mode Toggle */}
               <div className="flex gap-2 mb-4">
@@ -1479,15 +1595,21 @@ export default function AdminPage() {
             </div>
           )}
 
-           {/* ACCOUNTS */}
-           {activeNav === "accounts" && (
-             <div className="space-y-6">
-               <div className="flex items-center justify-between">
-                 <div>
-                   <h1 className="text-3xl font-bold text-slate-900">Account Management</h1>
-                   <p className="text-slate-600">Create and manage user accounts with role-based access control</p>
-                 </div>
-               </div>
+            {/* ACCOUNTS */}
+            {activeNav === "accounts" && (
+              <div className="space-y-6">
+                <div className="text-center py-6 bg-gradient-to-r from-red-50 via-blue-50 to-green-50 rounded-2xl border-2 border-red-100">
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-red-700 via-blue-700 to-green-700 bg-clip-text text-transparent">
+                    NEW JUABEN SOUTH
+                  </h1>
+                  <h2 className="text-2xl font-bold text-red-700 mt-2">NEW PATRIOTIC PARTY</h2>
+                  <p className="text-lg font-semibold text-slate-700 mt-3">Account Management System</p>
+                  <div className="mt-3 flex items-center justify-center gap-3">
+                    <div className="h-1 w-16 bg-red-600 rounded"></div>
+                    <span className="px-4 py-1 bg-gradient-to-r from-red-100 to-blue-100 border-2 border-red-300 rounded-full text-sm font-bold text-red-800">USER ACCOUNTS</span>
+                    <div className="h-1 w-16 bg-blue-600 rounded"></div>
+                  </div>
+                </div>
 
                {/* Create Account Form */}
                <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -1738,12 +1860,12 @@ export default function AdminPage() {
              const verificationRate = returned > 0 ? (verified / returned) * 100 : 0;
 
              // Calculate contests (more than 1 applicant for same position in same polling station)
-             const positionGroups = filteredRecords.reduce((acc, record) => {
-               const key = `${record.electoralArea}|${record.station}|${record.position}`;
-               if (!acc[key]) acc[key] = [];
-               acc[key].push(record);
-               return acc;
-             }, {} as Record<string, DelegateRecord[]>);
+              const positionGroups = filteredRecords.reduce((acc, record) => {
+                const key = `${record.electoralArea}|${record.stationCode}|${record.position}`;
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(record);
+                return acc;
+              }, {} as Record<string, DelegateRecord[]>);
 
              const totalContests = Object.values(positionGroups).filter(group => group.length > 1).length;
              const totalUnopposed = Object.values(positionGroups).filter(group => group.length === 1).length;
@@ -1815,14 +1937,28 @@ export default function AdminPage() {
                  };
                });
 
-             return (
-               <div className="space-y-6">
-                 {/* Header Section */}
-                 <div className="flex flex-wrap items-center justify-between gap-4">
-                   <div>
-                     <h1 className="text-3xl font-bold text-slate-900">Final Election Report</h1>
-                     <p className="text-slate-600">Comprehensive election overview and analytics</p>
-                   </div>
+              return (
+                <div className="space-y-6">
+                  {/* NPP Branding Header */}
+                  <div className="text-center py-6 bg-gradient-to-r from-red-50 via-blue-50 to-green-50 rounded-2xl border-2 border-red-100">
+                    <h1 className="text-4xl font-bold bg-gradient-to-r from-red-700 via-blue-700 to-green-700 bg-clip-text text-transparent">
+                      NEW JUABEN SOUTH
+                    </h1>
+                    <h2 className="text-2xl font-bold text-red-700 mt-2">NEW PATRIOTIC PARTY</h2>
+                    <p className="text-lg font-semibold text-slate-700 mt-3">Election Results & Analytics</p>
+                    <div className="mt-3 flex items-center justify-center gap-3">
+                      <div className="h-1 w-16 bg-red-600 rounded"></div>
+                      <span className="px-4 py-1 bg-gradient-to-r from-red-100 to-blue-100 border-2 border-red-300 rounded-full text-sm font-bold text-red-800">FINAL REPORT</span>
+                      <div className="h-1 w-16 bg-blue-600 rounded"></div>
+                    </div>
+                  </div>
+
+                  {/* Action Header */}
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-800">📊 Analytics Dashboard</h2>
+                      <p className="text-slate-600">Comprehensive election overview and analytics</p>
+                    </div>
                    <div className="flex flex-wrap gap-2">
                      <button
                        onClick={handleExportCSV}
