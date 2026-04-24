@@ -189,7 +189,7 @@ function SingleVettingCard({
              badge={record.status === "RETURNED" ? "success" : record.status === "REJECTED" ? "error" : "warning"}
            />
            <DetailItem label="Electoral Area" value={record.electoralArea} />
-           <DetailItem label="Polling Station" value={record.station} />
+            <DetailItem label="Polling Station" value={`${record.station} (${record.stationCode})`} />
            <DetailItem label="Delegate Type" value={record.delegateType} />
            <DetailItem 
              label="Issued Date" 
@@ -723,44 +723,44 @@ export default function AdminPage() {
         return;
       }
 
-     // Create CSV content
-     const headers = [
-       'Electoral Area',
-       'Polling Station',
-       'Position',
-       'Delegate Type',
-       'Status',
-       'Decision',
-       'Surname',
-       'First Name',
-       'Middle Name',
-       'Phone',
-       'Age',
-       'Issued Date',
-       'Returned Date'
-     ];
+      // Create CSV content
+      const headers = [
+        'Electoral Area',
+        'Polling Station',
+        'Position',
+        'Delegate Type',
+        'Status',
+        'Decision',
+        'Surname',
+        'First Name',
+        'Middle Name',
+        'Phone',
+        'Age',
+        'Issued Date',
+        'Returned Date'
+      ];
 
-     const csvRows = [];
-     csvRows.push(headers.join(','));
-
-     filteredRecords.forEach(record => {
-       const row = [
-         `"${record.electoralArea || ''}"`,
-         `"${record.station || ''}"`,
-         `"${record.position || ''}"`,
-         `"${record.delegateType || ''}"`,
-         `"${record.status || ''}"`,
-         `"${record.currentDecision || ''}"`,
-         `"${record.surname || ''}"`,
-         `"${record.firstname || ''}"`,
-         `"${record.middlename || ''}"`,
-         `"${record.phone || ''}"`,
-         `"${record.age || ''}"`,
-         `"${record.issuedDate || ''}"`,
-         `"${record.returnedDate || ''}"`
-       ];
-       csvRows.push(row.join(','));
-     });
+      const csvRows = [];
+      csvRows.push(headers.join(','));
+      
+      filteredRecords.forEach(record => {
+        const row = [
+          `"${record.electoralArea || ''}"`,
+          `"${record.station || ''} (${record.stationCode || ''})"`,
+          `"${record.position || ''}"`,
+          `"${record.delegateType || ''}"`,
+          `"${record.status || ''}"`,
+          `"${record.currentDecision || ''}"`,
+          `"${record.surname || ''}"`,
+          `"${record.firstname || ''}"`,
+          `"${record.middlename || ''}"`,
+          `"${record.phone || ''}"`,
+          `"${record.age || ''}"`,
+          `"${record.issuedDate || ''}"`,
+          `"${record.returnedDate || ''}"`
+        ];
+        csvRows.push(row.join(','));
+      });
 
      const csvContent = csvRows.join('\n');
      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -827,7 +827,7 @@ export default function AdminPage() {
      filteredRecords.forEach(record => {
        const row = [
          `"${record.electoralArea || ''}"`,
-         `"${record.station || ''}"`,
+         `"${record.station || ''} (${record.stationCode || ''})"`,
          `"${record.position || ''}"`,
          `"${record.delegateType || ''}"`,
          `"${record.status || ''}"`,
@@ -948,14 +948,20 @@ export default function AdminPage() {
       return;
     }
 
-     const newRecord = {
-       id: Date.now().toString(),
-       ...(issueForm as Omit<DelegateRecord, 'id' | 'decisions' | 'currentDecision' | 'status' | 'issuedDate'>),
-       decisions: [],
-       currentDecision: "PENDING",
-       status: "ISSUED",
-       issuedDate: new Date().toISOString(),
-     } as DelegateRecord;
+      // Ensure we have the correct station name and code from the form
+      const stationName = issueForm.station || "";
+      const stationCode = issueForm.stationCode || "";
+      
+      const newRecord = {
+        id: Date.now().toString(),
+        ...(issueForm as Omit<DelegateRecord, 'id' | 'decisions' | 'currentDecision' | 'status' | 'issuedDate'>),
+        station: stationName,
+        stationCode: stationCode,
+        decisions: [],
+        currentDecision: "PENDING",
+        status: "ISSUED",
+        issuedDate: new Date().toISOString(),
+      } as DelegateRecord;
 
     persistRecords([newRecord, ...delegateRecords]);
     setIssueForm({});
@@ -1604,7 +1610,7 @@ export default function AdminPage() {
                             <td className="py-3 px-3">{r.phone}</td>
                             <td className="py-3 px-3">{r.position}</td>
                             <td className="py-3 px-3">{r.electoralArea}</td>
-                            <td className="py-3 px-3">{r.station}</td>
+                             <td className="py-3 px-3">{r.station} ({r.stationCode})</td>
                             <td className="py-3 px-3">
                               <span className={`px-2 py-1 rounded text-xs ${r.status === "RETURNED" ? "bg-green-100 text-green-700" : r.status === "REJECTED" ? "bg-red-100 text-red-700" : "bg-slate-200"}`}>
                                 {r.status}
@@ -1965,8 +1971,16 @@ export default function AdminPage() {
 
              const areaSummaryArray = Object.values(areaSummaryData);
 
-             // Calculate detailed view data for contests only or detailed view
-             const detailedViewData = reportView === "contests" ?
+              // Helper function to get station code by name and area
+              const getStationCode = (stationName: string, areaName: string): string => {
+                const area = electoralAreas.find(a => a.name === areaName);
+                if (!area) return '';
+                const station = area.pollingStations.find(s => s.name === stationName);
+                return station ? station.code : '';
+              };
+
+              // Calculate detailed view data for contests only or detailed view
+              const detailedViewData = reportView === "contests" ?
                Object.entries(positionGroups)
                  .filter(([_, applicants]) => applicants.length > 1)
                  .map(([key, applicants]) => {
@@ -2304,7 +2318,7 @@ export default function AdminPage() {
                            {detailedViewData.map((item: any, index: number) => (
                              <tr key={index} className="border-b border-slate-100 hover:bg-slate-50">
                                <td className="py-3 px-4 font-medium">{item.area}</td>
-                               <td className="py-3 px-4">{item.station}</td>
+                                <td className="py-3 px-4">{item.station} ({getStationCode(item.station, item.area)})</td>
                                <td className="py-3 px-4">{item.position}</td>
                                <td className="py-3 px-4">
                                  <div className="space-y-2">
