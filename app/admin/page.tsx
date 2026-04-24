@@ -566,72 +566,114 @@ export default function AdminPage() {
 
 
 
-  // Load data from localStorage
+  // Fetch data from API and load from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("panelMembers");
-    if (saved) {
+    const fetchRecords = async () => {
       try {
-        const parsed = JSON.parse(saved) as User[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Ensure default panel members exist (one-time seed)
-          const hasPanelMember = parsed.some(acc => acc.role === "panel_member");
-          if (!hasPanelMember) {
-            const defaultPanelMembers = DEFAULT_ACCOUNTS.filter(acc => acc.role === "panel_member");
-            const merged = [...parsed, ...defaultPanelMembers];
-            localStorage.setItem("panelMembers", JSON.stringify(merged));
-            setPanelMembers(merged);
-          } else {
-            setPanelMembers(parsed);
-          }
+        const response = await fetch(SCRIPT_URL + "?action=GET_ALL");
+        const data = await response.json();
+        if (data && Array.isArray(data)) {
+          const migrated = data.map((r: any) => ({
+            ...r,
+            decisions: r.decisions?.map((d: any) => ({
+              ...d,
+              vettingQuestions: {
+                aspirantPresent: d.vettingQuestions?.formComplete || d.vettingQuestions?.aspirantPresent || false,
+                partyMembershipCardSighted: d.vettingQuestions?.photoIdVerified || d.vettingQuestions?.partyMembershipCardSighted || false,
+                nameMatchesPartyRegister: d.vettingQuestions?.eligibilityConfirmed || d.vettingQuestions?.nameMatchesPartyRegister || false,
+                votersIdOrGhanaCardSighted: d.vettingQuestions?.positionMatches || d.vettingQuestions?.votersIdOrGhanaCardSighted || false,
+                passportPhotoMatches: d.vettingQuestions?.noDuplicate || d.vettingQuestions?.passportPhotoMatches || false,
+                membershipConfirmedAtStation: d.vettingQuestions?.finalApproval || d.vettingQuestions?.membershipConfirmedAtStation || false,
+              }
+            })) || [],
+            currentDecision: r.currentDecision || "PENDING",
+            overallComment: r.overallComment || "",
+          }));
+          setDelegateRecords(migrated);
+          localStorage.setItem("delegateRecords", JSON.stringify(migrated));
+          return;
         }
-      } catch {
+      } catch (e) {
+        console.log("Failed to fetch remote records, using local storage");
+      }
+
+      // Fallback to localStorage
+      const savedRecords = localStorage.getItem("delegateRecords");
+      if (savedRecords) {
+        try {
+          const parsed = JSON.parse(savedRecords);
+          const migrated = parsed.map((r: any) => ({
+            ...r,
+            decisions: r.decisions?.map((d: any) => ({
+              ...d,
+              vettingQuestions: {
+                aspirantPresent: d.vettingQuestions?.formComplete || d.vettingQuestions?.aspirantPresent || false,
+                partyMembershipCardSighted: d.vettingQuestions?.photoIdVerified || d.vettingQuestions?.partyMembershipCardSighted || false,
+                nameMatchesPartyRegister: d.vettingQuestions?.eligibilityConfirmed || d.vettingQuestions?.nameMatchesPartyRegister || false,
+                votersIdOrGhanaCardSighted: d.vettingQuestions?.positionMatches || d.vettingQuestions?.votersIdOrGhanaCardSighted || false,
+                passportPhotoMatches: d.vettingQuestions?.noDuplicate || d.vettingQuestions?.passportPhotoMatches || false,
+                membershipConfirmedAtStation: d.vettingQuestions?.finalApproval || d.vettingQuestions?.membershipConfirmedAtStation || false,
+              }
+            })) || [],
+            currentDecision: r.currentDecision || "PENDING",
+            overallComment: r.overallComment || "",
+          }));
+          setDelegateRecords(migrated);
+        } catch {
+          setDelegateRecords([]);
+        }
+      }
+    };
+
+    // Load panel members from localStorage
+    const loadPanelMembers = () => {
+      const saved = localStorage.getItem("panelMembers");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved) as User[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Ensure default panel members exist (one-time seed)
+            const hasPanelMember = parsed.some(acc => acc.role === "panel_member");
+            if (!hasPanelMember) {
+              const defaultPanelMembers = DEFAULT_ACCOUNTS.filter(acc => acc.role === "panel_member");
+              const merged = [...parsed, ...defaultPanelMembers];
+              localStorage.setItem("panelMembers", JSON.stringify(merged));
+              setPanelMembers(merged);
+            } else {
+              setPanelMembers(parsed);
+            }
+          }
+        } catch {
+          localStorage.setItem("panelMembers", JSON.stringify(DEFAULT_ACCOUNTS));
+          setPanelMembers(DEFAULT_ACCOUNTS);
+        }
+      } else {
         localStorage.setItem("panelMembers", JSON.stringify(DEFAULT_ACCOUNTS));
         setPanelMembers(DEFAULT_ACCOUNTS);
       }
-    } else {
-      localStorage.setItem("panelMembers", JSON.stringify(DEFAULT_ACCOUNTS));
-      setPanelMembers(DEFAULT_ACCOUNTS);
-    }
+    };
 
-    const savedRecords = localStorage.getItem("delegateRecords");
-    if (savedRecords) {
-      try {
-        const parsed = JSON.parse(savedRecords);
-        const migrated = parsed.map((r: any) => ({
-          ...r,
-          decisions: r.decisions?.map((d: any) => ({
-            ...d,
-            vettingQuestions: {
-              aspirantPresent: d.vettingQuestions?.formComplete || d.vettingQuestions?.aspirantPresent || false,
-              partyMembershipCardSighted: d.vettingQuestions?.photoIdVerified || d.vettingQuestions?.partyMembershipCardSighted || false,
-              nameMatchesPartyRegister: d.vettingQuestions?.eligibilityConfirmed || d.vettingQuestions?.nameMatchesPartyRegister || false,
-              votersIdOrGhanaCardSighted: d.vettingQuestions?.positionMatches || d.vettingQuestions?.votersIdOrGhanaCardSighted || false,
-              passportPhotoMatches: d.vettingQuestions?.noDuplicate || d.vettingQuestions?.passportPhotoMatches || false,
-              membershipConfirmedAtStation: d.vettingQuestions?.finalApproval || d.vettingQuestions?.membershipConfirmedAtStation || false,
-            }
-          })) || [],
-          currentDecision: r.currentDecision || "PENDING",
-          overallComment: r.overallComment || "",
-        }));
-        setDelegateRecords(migrated);
-      } catch {
-        setDelegateRecords([]);
-      }
-    }
-
-    const savedUser = localStorage.getItem("currentUser");
-    if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser) as PanelMember;
-        setCurrentUser(parsedUser);
-        setIsAuthorized(parsedUser.role === "admin" || parsedUser.role === "panel_member");
-      } catch {
-        setCurrentUser(null);
+    // Load current user from localStorage
+    const loadCurrentUser = () => {
+      const savedUser = localStorage.getItem("currentUser");
+      if (savedUser) {
+        try {
+          const parsedUser = JSON.parse(savedUser) as PanelMember;
+          setCurrentUser(parsedUser);
+          setIsAuthorized(parsedUser.role === "admin" || parsedUser.role === "panel_member");
+        } catch {
+          setCurrentUser(null);
+          setIsAuthorized(false);
+        }
+      } else {
         setIsAuthorized(false);
       }
-    } else {
-      setIsAuthorized(false);
-    }
+    };
+
+    // Fetch records first, then load other data
+    fetchRecords();
+    loadPanelMembers();
+    loadCurrentUser();
 
     setAuthChecked(true);
   }, []);
@@ -1937,6 +1979,37 @@ export default function AdminPage() {
                  };
                });
 
+              // Calculate position breakdown for selected station
+              const stationPositionBreakdown = (() => {
+                if (!reportFilterArea || !reportFilterStation) return null;
+                const filtered = delegateRecords.filter(
+                  r => r.electoralArea === reportFilterArea && r.stationCode === reportFilterStation
+                );
+                const groups = filtered.reduce((acc, rec) => {
+                  const pos = rec.position || "Unknown";
+                  if (!acc[pos]) acc[pos] = [];
+                  acc[pos].push(rec);
+                  return acc;
+                }, {} as Record<string, DelegateRecord[]>);
+
+                return Object.entries(groups)
+                  .map(([position, applicants]) => ({
+                    position,
+                    applicants,
+                    count: applicants.length,
+                    status: applicants.length > 1 ? "CONTEST" : "UNOPPOSED"
+                  }))
+                  .sort((a, b) => b.count - a.count);
+              })();
+
+              // Get selected station details
+              const selectedStationDetails = (() => {
+                if (!reportFilterArea || !reportFilterStation) return null;
+                const area = electoralAreas.find(a => a.name === reportFilterArea);
+                const station = area?.pollingStations.find(s => s.code === reportFilterStation);
+                return station || null;
+              })();
+
               return (
                 <div className="space-y-6">
                   {/* NPP Branding Header */}
@@ -2006,185 +2079,199 @@ export default function AdminPage() {
                    </button>
                  </div>
 
-                 {/* Filters Section */}
-                 <div className="bg-white rounded-xl shadow-lg p-6 sticky top-4">
-                   <h2 className="text-xl font-bold text-slate-900 mb-4">🔍 Filters</h2>
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4">
-                     <div>
-                       <label className="block text-sm font-medium text-slate-700 mb-1">Electoral Area</label>
-                       <select
-                         value={reportFilterArea}
-                         onChange={(e) => { setReportFilterArea(e.target.value); setReportFilterStation(""); }}
-                         className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
-                       >
-                         <option value="">All</option>
-                         {electoralAreas.map((a) => <option key={a.name} value={a.name}>{a.name}</option>)}
-                       </select>
-                     </div>
-                     <div>
-                       <label className="block text-sm font-medium text-slate-700 mb-1">Polling Station</label>
-                       <select
-                         value={reportFilterStation}
-                         onChange={(e) => setReportFilterStation(e.target.value)}
-                         className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
-                         disabled={!reportFilterArea}
-                       >
-                         <option value="">All</option>
-                         {reportFilterArea &&
-                           electoralAreas.find(a => a.name === reportFilterArea)?.pollingStations.map((s) => (
-                             <option key={s.code} value={s.code}>{s.name} ({s.code})</option>
-                           ))
-                         }
-                       </select>
-                     </div>
-                     <div>
-                       <label className="block text-sm font-medium text-slate-700 mb-1">Position</label>
-                       <select
-                         value={reportFilterPosition}
-                         onChange={(e) => setReportFilterPosition(e.target.value)}
-                         className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
-                       >
-                         <option value="">All</option>
-                         {POSITIONS.map((p) => <option key={p} value={p}>{p}</option>)}
-                       </select>
-                     </div>
-                     <div>
-                       <label className="block text-sm font-medium text-slate-700 mb-1">Delegate Type</label>
-                       <select
-                         value={reportFilterDelegateType}
-                         onChange={(e) => setReportFilterDelegateType(e.target.value)}
-                         className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
-                       >
-                         <option value="">All</option>
-                          {DELEGATE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                       </select>
-                     </div>
-                     <div>
-                       <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                       <select
-                         value={reportFilterStatus}
-                         onChange={(e) => setReportFilterStatus(e.target.value)}
-                         className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
-                       >
-                         <option value="">All</option>
-                         <option value="ISSUED">Issued</option>
-                         <option value="RETURNED">Returned</option>
-                         <option value="VERIFIED">Verified</option>
-                         <option value="REJECTED">Rejected</option>
-                       </select>
-                     </div>
-                   </div>
-                   <div className="flex gap-3">
-                     <button
-                        onClick={() => {
-                          setMessage("Filters applied successfully");
-                        }}
-                       className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
-                     >
-                       Apply Filters
-                     </button>
-                     <button
-                       onClick={() => {
-                         setReportFilterArea("");
-                         setReportFilterStation("");
-                         setReportFilterPosition("");
-                         setReportFilterDelegateType("");
-                         setReportFilterStatus("");
-                         setMessage("Filters cleared");
-                       }}
-                       className="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium"
-                     >
-                       Clear Filters
-                     </button>
+                  {/* Filters Section */}
+                  <div className="bg-white rounded-xl shadow-lg p-6 sticky top-4">
+                    <h2 className="text-xl font-bold text-slate-900 mb-4">🔍 Filters</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
+                       <div>
+                         <label className="block text-sm font-medium text-slate-700 mb-1">Electoral Area</label>
+                         <select
+                           value={reportFilterArea}
+                           onChange={(e) => setReportFilterArea(e.target.value)}
+                           className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                         >
+                           <option value="">All</option>
+                           {electoralAreas.map((a) => <option key={a.name} value={a.name}>{a.name}</option>)}
+                         </select>
+                       </div>
+                       <div>
+                         <label className="block text-sm font-medium text-slate-700 mb-1">Polling Station</label>
+                         <select
+                           value={reportFilterStation}
+                           onChange={(e) => setReportFilterStation(e.target.value)}
+                           className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                         >
+                           <option value="">All</option>
+                            {reportFilterArea ? (
+                              electoralAreas.find(a => a.name === reportFilterArea)?.pollingStations.map((s) => (
+                                <option key={s.code} value={s.code}>{s.name} ({s.code})</option>
+                              )) || []
+                            ) : (
+                              electoralAreas.flatMap(area => 
+                                area.pollingStations.map(station => (
+                                  <option key={station.code} value={station.code}>
+                                    {station.name} ({station.code}) - {area.name}
+                                  </option>
+                                ))
+                              )
+                            )}
+                         </select>
+                       </div>
+                       <div>
+                         <label className="block text-sm font-medium text-slate-700 mb-1">Position</label>
+                         <select
+                           value={reportFilterPosition}
+                           onChange={(e) => setReportFilterPosition(e.target.value)}
+                           className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                         >
+                           <option value="">All</option>
+                           {POSITIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+                         </select>
+                       </div>
+                       <div>
+                         <label className="block text-sm font-medium text-slate-700 mb-1">Delegate Type</label>
+                         <select
+                           value={reportFilterDelegateType}
+                           onChange={(e) => setReportFilterDelegateType(e.target.value)}
+                           className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                         >
+                           <option value="">All</option>
+                            {DELEGATE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                         </select>
+                       </div>
+                       <div>
+                         <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                         <select
+                           value={reportFilterStatus}
+                           onChange={(e) => setReportFilterStatus(e.target.value)}
+                           className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                         >
+                           <option value="">All</option>
+                           <option value="ISSUED">Issued</option>
+                           <option value="RETURNED">Returned</option>
+                           <option value="VERIFIED">Verified</option>
+                           <option value="REJECTED">Rejected</option>
+                         </select>
+                       </div>
+                    </div>
+                  </div>
+
+                  {/* Summary Table */}
+                  <div className="bg-white rounded-xl shadow-lg p-6">
+                    <h2 className="text-xl font-bold text-slate-900 mb-4">📈 Summary Report</h2>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-slate-100">
+                          <tr>
+                            <th className="text-left py-3 px-4 font-semibold">Metric</th>
+                            <th className="text-center py-3 px-4 font-semibold">Issued</th>
+                            <th className="text-center py-3 px-4 font-semibold">Returned</th>
+                            <th className="text-center py-3 px-4 font-semibold">Verified</th>
+                            <th className="text-center py-3 px-4 font-semibold">Rejected</th>
+                            <th className="text-center py-3 px-4 font-semibold">Contests</th>
+                            <th className="text-center py-3 px-4 font-semibold">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {areaSummaryArray.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="py-8 text-center text-slate-500">No data available</td>
+                            </tr>
+                          ) : (
+                            areaSummaryArray.map((area: any, idx: number) => (
+                              <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
+                                <td className="py-3 px-4 font-medium">{area.area}</td>
+                                <td className="py-3 px-4 text-center">{area.issued}</td>
+                                <td className="py-3 px-4 text-center">{area.returned}</td>
+                                <td className="py-3 px-4 text-center">{area.verified}</td>
+                                <td className="py-3 px-4 text-center">{area.rejected}</td>
+                                <td className="py-3 px-4 text-center">{area.contests}</td>
+                                <td className="py-3 px-4 text-center">{area.total}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                        <tfoot className="bg-slate-50">
+                          <tr>
+                            <td className="py-3 px-4 font-bold text-slate-900">TOTAL</td>
+                            <td className="py-3 px-4 font-bold text-slate-900 text-center">{issued}</td>
+                            <td className="py-3 px-4 font-bold text-slate-900 text-center">{returned}</td>
+                            <td className="py-3 px-4 font-bold text-slate-900 text-center">{verified}</td>
+                            <td className="py-3 px-4 font-bold text-slate-900 text-center">{rejected}</td>
+                            <td className="py-3 px-4 font-bold text-slate-900 text-center">{totalContests}</td>
+                            <td className="py-3 px-4 font-bold text-slate-900 text-center">{totalDelegates}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
                    </div>
                  </div>
 
-                 {/* Summary Cards */}
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
-                   <div className="bg-white rounded-xl shadow-lg p-6">
-                     <div className="text-3xl font-bold text-slate-900">{totalDelegates}</div>
-                     <div className="text-slate-600 mt-1">Total Delegates</div>
-                   </div>
-                   <div className="bg-white rounded-xl shadow-lg p-6">
-                     <div className="text-3xl font-bold text-slate-900">{returnRate.toFixed(1)}%</div>
-                     <div className="text-slate-600 mt-1">Return Rate</div>
-                   </div>
-                   <div className="bg-white rounded-xl shadow-lg p-6">
-                     <div className="text-3xl font-bold text-slate-900">{verificationRate.toFixed(1)}%</div>
-                     <div className="text-slate-600 mt-1">Verification Rate</div>
-                   </div>
-                   <div className="bg-white rounded-xl shadow-lg p-6">
-                     <div className="text-3xl font-bold text-slate-900">{totalContests}</div>
-                     <div className="text-slate-600 mt-1">Total Contests</div>
-                   </div>
-                   <div className="bg-white rounded-xl shadow-lg p-6">
-                     <div className="text-3xl font-bold text-slate-900">{totalUnopposed}</div>
-                     <div className="text-slate-600 mt-1">Total Unopposed</div>
-                   </div>
-                   <div className="bg-white rounded-xl shadow-lg p-6">
-                     <div className="text-3xl font-bold text-slate-900">{oldDelegates}</div>
-                     <div className="text-slate-600 mt-1">Old Delegates</div>
-                   </div>
-                   <div className="bg-white rounded-xl shadow-lg p-6">
-                     <div className="text-3xl font-bold text-slate-900">{newDelegates}</div>
-                     <div className="text-slate-600 mt-1">New Delegates</div>
-                   </div>
-                 </div>
+                  {/* Position Analysis - Drill-down by Station */}
+                  {reportFilterArea && reportFilterStation && stationPositionBreakdown && selectedStationDetails && (
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg p-6 border-2 border-blue-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h2 className="text-xl font-bold text-slate-900">
+                            🏢 {selectedStationDetails.name}
+                          </h2>
+                          <p className="text-sm text-slate-600">
+                            Station Code: <span className="font-mono font-bold">{selectedStationDetails.code}</span>
+                            {" • "}
+                            Area: {reportFilterArea}
+                            {" • "}
+                            Positions: {stationPositionBreakdown.length}
+                          </p>
+                        </div>
+                        <div className="flex gap-2 text-sm">
+                          <div className="px-3 py-1 bg-red-100 text-red-700 rounded-full font-bold">
+                            Contests: {stationPositionBreakdown.filter(p => p.status === "CONTEST").length}
+                          </div>
+                          <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full font-bold">
+                            Unopposed: {stationPositionBreakdown.filter(p => p.status === "UNOPPOSED").length}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-blue-100/60">
+                            <tr>
+                              <th className="text-left py-3 px-4 font-semibold text-slate-700">Position</th>
+                              <th className="text-center py-3 px-4 font-semibold text-slate-700">Applicants</th>
+                              <th className="text-center py-3 px-4 font-semibold text-slate-700">Status</th>
+                              <th className="text-left py-3 px-4 font-semibold text-slate-700">Applicants List</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {stationPositionBreakdown.map((item, idx) => (
+                              <tr key={idx} className="border-b border-blue-100/40 hover:bg-blue-50/30">
+                                <td className="py-3 px-4 font-medium text-slate-800">{item.position}</td>
+                                <td className="py-3 px-4 text-center">
+                                  <span className="text-lg font-bold">{item.count}</span>
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${item.status === "CONTEST" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                                    {item.status}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <div className="space-y-1">
+                                    {item.applicants.map((applicant: DelegateRecord, i: number) => (
+                                      <div key={i} className="text-sm p-2 bg-white/70 rounded border border-blue-100">
+                                        <span className="font-medium">{applicant.surname} {applicant.firstname}</span>
+                                        <span className="text-slate-500 ml-2">({applicant.delegateType})</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
 
-                 {/* Electoral Area Summary Table */}
-                 <div className="bg-white rounded-xl shadow-lg p-6">
-                   <h2 className="text-xl font-bold text-slate-900 mb-4">🗺️ Electoral Area Summary</h2>
-                   <div className="overflow-x-auto">
-                     <table className="w-full">
-                       <thead className="bg-slate-100">
-                         <tr>
-                           <th className="text-left py-3 px-4 font-semibold">Electoral Area</th>
-                           <th className="text-left py-3 px-4 font-semibold">Issued</th>
-                           <th className="text-left py-3 px-4 font-semibold">Returned</th>
-                           <th className="text-left py-3 px-4 font-semibold">Verified</th>
-                           <th className="text-left py-3 px-4 font-semibold">Rejected</th>
-                           <th className="text-left py-3 px-4 font-semibold">Contests</th>
-                           <th className="text-left py-3 px-4 font-semibold">Total</th>
-                         </tr>
-                       </thead>
-                       <tbody>
-                         {areaSummaryArray.map((areaData: any, index: number) => (
-                           <tr key={index} className={`border-b border-slate-100 hover:bg-slate-50 ${areaData.contests > 0 ? "bg-red-50" : ""}`}>
-                             <td className="py-3 px-4 font-medium">{areaData.area}</td>
-                             <td className="py-3 px-4">{areaData.issued}</td>
-                             <td className="py-3 px-4">{areaData.returned}</td>
-                             <td className="py-3 px-4">{areaData.verified}</td>
-                             <td className="py-3 px-4">{areaData.rejected}</td>
-                             <td className="py-3 px-4">
-                               <span className={`px-3 py-1 rounded-full text-xs font-bold ${areaData.contests > 0 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
-                                 {areaData.contests}
-                               </span>
-                             </td>
-                             <td className="py-3 px-4">{areaData.total}</td>
-                           </tr>
-                         ))}
-                         {areaSummaryArray.length === 0 && (
-                           <tr>
-                             <td colSpan={7} className="py-8 text-center text-slate-500">No data available</td>
-                           </tr>
-                         )}
-                       </tbody>
-                       <tfoot className="bg-slate-50">
-                         <tr>
-                           <td className="py-3 px-4 font-bold text-slate-900">TOTAL</td>
-                           <td className="py-3 px-4 font-bold text-slate-900">{issued}</td>
-                           <td className="py-3 px-4 font-bold text-slate-900">{returned}</td>
-                           <td className="py-3 px-4 font-bold text-slate-900">{verified}</td>
-                           <td className="py-3 px-4 font-bold text-slate-900">{rejected}</td>
-                           <td className="py-3 px-4 font-bold text-slate-900">{totalContests}</td>
-                           <td className="py-3 px-4 font-bold text-slate-900">{totalDelegates}</td>
-                         </tr>
-                       </tfoot>
-                     </table>
-                   </div>
-                 </div>
-
-                 {/* Detailed View */}
+                  {/* Detailed View */}
                  {(reportView === "detailed" || reportView === "contests") && (
                    <div className="bg-white rounded-xl shadow-lg p-6">
                      <h2 className="text-xl font-bold text-slate-900 mb-4">
