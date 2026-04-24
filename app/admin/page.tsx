@@ -937,7 +937,12 @@ export default function AdminPage() {
       return;
     }
 
-    const existing = delegateRecords.find(r => r.phone === issueForm.phone);
+    // Check for duplicates using phone + position + polling station code (composite key)
+    const existing = delegateRecords.find(r => 
+      r.phone === issueForm.phone && 
+      r.position === issueForm.position && 
+      r.stationCode === issueForm.stationCode
+    );
     if (existing) {
       const update = window.confirm(`A delegate with phone ${issueForm.phone} already exists.\n\nExisting: ${existing.surname} ${existing.firstname} (${existing.position})\n\nUpdate existing record?`);
       if (update) {
@@ -1539,7 +1544,8 @@ export default function AdminPage() {
                       setVettingSearchArea(e.target.value);
                       const area = electoralAreas.find(a => a.name === e.target.value);
                       setVettingSearchStations(area ? area.pollingStations : []);
-                      setVettingSearchStation("");
+                      // Only reset station if area changed and we want to enforce area-first selection
+                      // setVettingSearchStation(""); 
                     }}
                     className="px-4 py-2.5 border border-slate-300 rounded-lg bg-white"
                   >
@@ -1550,11 +1556,18 @@ export default function AdminPage() {
                     value={vettingSearchStation}
                     onChange={(e) => setVettingSearchStation(e.target.value)}
                     className="px-4 py-2.5 border border-slate-300 rounded-lg bg-white"
-                    disabled={!vettingSearchArea}
                   >
                     <option value="">All Polling Stations</option>
                     {vettingSearchStations.map((s) => <option key={s.code} value={s.name}>{s.name} ({s.code})</option>)}
                   </select>
+              <select
+                value={vettingSearchStation}
+                onChange={(e) => setVettingSearchStation(e.target.value)}
+                className="px-4 py-2.5 border border-slate-300 rounded-lg bg-white"
+              >
+                <option value="">All Polling Stations</option>
+                {vettingSearchStations.map((s) => <option key={s.code} value={s.name}>{s.name} ({s.code})</option>)}
+              </select>
                   <select
                     value={reportFilterStatus}
                     onChange={(e) => setReportFilterStatus(e.target.value)}
