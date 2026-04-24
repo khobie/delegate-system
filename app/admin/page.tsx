@@ -857,27 +857,29 @@ export default function AdminPage() {
 
 
 
-  // Stats computation
-  const getStats = () => {
-    const assignedRecords = currentUser?.role === "panel_member" && currentUser.assignedAreas.length > 0
-      ? delegateRecords.filter(r => currentUser.assignedAreas.includes(r.electoralArea))
-      : delegateRecords;
+   // Stats computation
+   const getStats = () => {
+     const assignedRecords = currentUser?.role === "panel_member" && currentUser.assignedAreas.length > 0
+       ? delegateRecords.filter(r => currentUser.assignedAreas.includes(r.electoralArea))
+       : delegateRecords;
 
-    return {
-      total: assignedRecords.length,
-      issued: assignedRecords.filter(r => r.status === "ISSUED").length,
-      returned: assignedRecords.filter(r => r.status === "RETURNED").length,
-      approved: assignedRecords.filter(r => r.currentDecision === "APPROVED").length,
-      rejected: assignedRecords.filter(r => r.currentDecision === "REJECTED").length,
-      pending: assignedRecords.filter(r => r.currentDecision === "PENDING").length,
-       contests: Object.values(assignedRecords.reduce((acc, r) => {
-         const key = `${r.electoralArea}|${r.stationCode}|${r.position}`;
-         if (!acc[key]) acc[key] = { count: 0 };
-         acc[key].count++;
-         return acc;
-       }, {} as Record<string, { count: number }>)).filter(c => c.count > 1).length,
-    };
-  };
+     return {
+       total: assignedRecords.length,
+       issued: assignedRecords.filter(r => r.status === "ISSUED").length,
+       returned: assignedRecords.filter(r => r.status === "RETURNED").length,
+       approved: assignedRecords.filter(r => r.currentDecision === "APPROVED").length,
+       rejected: assignedRecords.filter(r => r.currentDecision === "REJECTED").length,
+       pending: assignedRecords.filter(r => r.currentDecision === "PENDING").length,
+       oldDelegates: assignedRecords.filter(r => r.delegateType === "Old Delegate").length,
+       newDelegates: assignedRecords.filter(r => r.delegateType === "New Delegate").length,
+        contests: Object.values(assignedRecords.reduce((acc, r) => {
+          const key = `${r.electoralArea}|${r.stationCode}|${r.position}`;
+          if (!acc[key]) acc[key] = { count: 0 };
+          acc[key].count++;
+          return acc;
+        }, {} as Record<string, { count: number }>)).filter(c => c.count > 1).length,
+     };
+   };
 
   const stats = getStats();
 
@@ -1241,44 +1243,54 @@ export default function AdminPage() {
                </div>
                </div>
 
-               {/* Stats Cards with NPP Colors */}
-               <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
-                 {/* Total - NPP Red */}
-                 <div className="bg-gradient-to-br from-red-600 to-red-700 p-6 rounded-2xl text-white shadow-lg shadow-red-500/30 border-2 border-red-500">
-                   <div className="text-4xl font-bold">{stats.total}</div>
-                   <div className="text-red-100 mt-1 font-semibold">Total</div>
-                 </div>
-                 {/* Issued - NPP Green */}
-                 <div className="bg-gradient-to-br from-green-600 to-emerald-700 p-6 rounded-2xl text-white shadow-lg shadow-green-500/30 border-2 border-green-500">
-                   <div className="text-4xl font-bold">{stats.issued}</div>
-                   <div className="text-green-100 mt-1 font-semibold">Issued</div>
-                 </div>
-                 {/* Approved - Bright Green */}
-                 <div className="bg-gradient-to-br from-emerald-500 to-green-600 p-6 rounded-2xl text-white shadow-lg shadow-emerald-500/30 border-2 border-emerald-500">
-                   <div className="text-4xl font-bold">{stats.approved}</div>
-                   <div className="text-emerald-100 mt-1 font-semibold">Approved</div>
-                 </div>
-                 {/* Rejected - Bright Red */}
-                 <div className="bg-gradient-to-br from-rose-600 to-red-700 p-6 rounded-2xl text-white shadow-lg shadow-rose-500/30 border-2 border-rose-500">
-                   <div className="text-4xl font-bold">{stats.rejected}</div>
-                   <div className="text-rose-100 mt-1 font-semibold">Rejected</div>
-                 </div>
-                 {/* Pending - NPP Yellow/Gold */}
-                 <div className="bg-gradient-to-br from-amber-500 to-yellow-500 p-6 rounded-2xl text-white shadow-lg shadow-amber-500/30 border-2 border-amber-500">
-                   <div className="text-4xl font-bold">{stats.pending}</div>
-                   <div className="text-amber-100 mt-1 font-semibold">Pending</div>
-                 </div>
-                 {/* Contests - NPP Blue */}
-                 <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl text-white shadow-lg shadow-blue-500/30 border-2 border-blue-500">
-                   <div className="text-4xl font-bold">{stats.contests}</div>
-                   <div className="text-blue-100 mt-1 font-semibold">Contests</div>
-                 </div>
-                 {/* Returned - Cyan accent */}
-                 <div className="bg-gradient-to-br from-cyan-500 to-blue-600 p-6 rounded-2xl text-white shadow-lg shadow-cyan-500/30 border-2 border-cyan-500">
-                   <div className="text-4xl font-bold">{stats.returned}</div>
-                   <div className="text-cyan-100 mt-1 font-semibold">Returned</div>
-                 </div>
-              </div>
+                {/* Stats Cards with NPP Colors */}
+                <div className="grid grid-cols-2 md:grid-cols-9 gap-4">
+                  {/* Total - NPP Red */}
+                  <div className="bg-gradient-to-br from-red-600 to-red-700 p-6 rounded-2xl text-white shadow-lg shadow-red-500/30 border-2 border-red-500">
+                    <div className="text-4xl font-bold">{stats.total}</div>
+                    <div className="text-red-100 mt-1 font-semibold">Total</div>
+                  </div>
+                  {/* Issued - NPP Green */}
+                  <div className="bg-gradient-to-br from-green-600 to-emerald-700 p-6 rounded-2xl text-white shadow-lg shadow-green-500/30 border-2 border-green-500">
+                    <div className="text-4xl font-bold">{stats.issued}</div>
+                    <div className="text-green-100 mt-1 font-semibold">Issued</div>
+                  </div>
+                  {/* Approved - Bright Green */}
+                  <div className="bg-gradient-to-br from-emerald-500 to-green-600 p-6 rounded-2xl text-white shadow-lg shadow-emerald-500/30 border-2 border-emerald-500">
+                    <div className="text-4xl font-bold">{stats.approved}</div>
+                    <div className="text-emerald-100 mt-1 font-semibold">Approved</div>
+                  </div>
+                  {/* Rejected - Bright Red */}
+                  <div className="bg-gradient-to-br from-rose-600 to-red-700 p-6 rounded-2xl text-white shadow-lg shadow-rose-500/30 border-2 border-rose-500">
+                    <div className="text-4xl font-bold">{stats.rejected}</div>
+                    <div className="text-rose-100 mt-1 font-semibold">Rejected</div>
+                  </div>
+                  {/* Pending - NPP Yellow/Gold */}
+                  <div className="bg-gradient-to-br from-amber-500 to-yellow-500 p-6 rounded-2xl text-white shadow-lg shadow-amber-500/30 border-2 border-amber-500">
+                    <div className="text-4xl font-bold">{stats.pending}</div>
+                    <div className="text-amber-100 mt-1 font-semibold">Pending</div>
+                  </div>
+                  {/* Old Delegates - Purple */}
+                  <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-2xl text-white shadow-lg shadow-purple-500/30 border-2 border-purple-500">
+                    <div className="text-4xl font-bold">{stats.oldDelegates}</div>
+                    <div className="text-purple-100 mt-1 font-semibold">Old Delegates</div>
+                  </div>
+                  {/* New Delegates - Pink */}
+                  <div className="bg-gradient-to-br from-pink-600 to-rose-700 p-6 rounded-2xl text-white shadow-lg shadow-pink-500/30 border-2 border-pink-500">
+                    <div className="text-4xl font-bold">{stats.newDelegates}</div>
+                    <div className="text-pink-100 mt-1 font-semibold">New Delegates</div>
+                  </div>
+                  {/* Contests - NPP Blue */}
+                  <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl text-white shadow-lg shadow-blue-500/30 border-2 border-blue-500">
+                    <div className="text-4xl font-bold">{stats.contests}</div>
+                    <div className="text-blue-100 mt-1 font-semibold">Contests</div>
+                  </div>
+                  {/* Returned - Cyan accent */}
+                  <div className="bg-gradient-to-br from-cyan-500 to-blue-600 p-6 rounded-2xl text-white shadow-lg shadow-cyan-500/30 border-2 border-cyan-500">
+                    <div className="text-4xl font-bold">{stats.returned}</div>
+                    <div className="text-cyan-100 mt-1 font-semibold">Returned</div>
+                  </div>
+                </div>
 
               {/* Quick Stats */}
               <div className="grid md:grid-cols-2 gap-6">
